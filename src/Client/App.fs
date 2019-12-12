@@ -21,6 +21,7 @@ type Model =
       BondFilm : BondFilm option
       BondFilmList : BondFilm list option
       CurrentFilm : int option
+      IsBurgerOpen : bool
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -28,12 +29,13 @@ type Model =
 type Msg =
 | BondFilmListLoaded of BondFilm list
 | BondFilmSelected of BondFilm
+| ToggleBurger
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None }
+    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false }
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -43,15 +45,14 @@ let init () : Model * Cmd<Msg> =
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel.BondFilmList, msg with
-    | Some _, BondFilmSelected b ->
+    | _, BondFilmSelected b ->
         printf "BondFilmSelected msg"
         let nextModel = { currentModel with BondFilm = Some b; CurrentFilm = Some b.SequenceId }
         nextModel, Cmd.none
     | _, BondFilmListLoaded films ->
-        let nextModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = Some films; CurrentFilm = None }
+        let nextModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = Some films; CurrentFilm = None; IsBurgerOpen = false }
         nextModel, Cmd.none
-    | _ -> currentModel, Cmd.none
-
+    | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
 
 let safeComponents =
     let components =
@@ -78,15 +79,22 @@ let safeComponents =
           str " powered by: "
           components ]
 
-let navBrand =
+let navBrand isBurgerOpen dispatch =
     Navbar.Brand.div [ ]
         [ Navbar.Item.a
             [ Navbar.Item.Props [] ]
             [ img [ Src "007_tranparent.png"
-                    Alt "Logo" ] ] ]
+                    Alt "Logo" ] ]
+          Navbar.burger [ Modifiers [ ]
+                          CustomClass (if isBurgerOpen then "is-active" else "")
+                          Props [
+                            OnClick (fun _ -> dispatch ToggleBurger) ] ]
+                        [ span [ ] [ ]
+                          span [ ] [ ]
+                          span [ ] [ ] ] ]
 
-let navMenu =
-    Navbar.menu [ ]
+let navMenu isBurgerOpen =
+    Navbar.menu [ Navbar.Menu.IsActive isBurgerOpen ]
         [ Navbar.End.div [ ]
             [ Navbar.Item.a [ ]
                 [
@@ -97,7 +105,7 @@ let navMenu =
                     [ Button.Color IsWhite
                       Button.IsOutlined
                       Button.Size IsSmall
-                      Button.Props [ Href "https://github.com/Kev1nR/Bond-Interrogator-Azure" ] ]
+                      Button.Props [ Href "https://github.com/Kev1nR/Bond-Interrogator" ] ]
                     [ Icon.icon [ ]
                         [ Fa.i [Fa.Brand.Github; Fa.FixedWidth] [] ]
                       span [ ] [ str "View Source" ] ] ] ] ]
@@ -126,11 +134,8 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                   for m in films do
                                     yield Dropdown.Item.a
                                       [
-                                          Dropdown.Item.IsActive (model.CurrentFilm |> Option.fold (fun _ id -> id = m.SequenceId) false)
-                                          Dropdown.Item.Props
-                                            [
-                                              OnClick ( fun _ -> dispatch (BondFilmSelected m))
-                                            ]
+                                          Dropdown.Item.IsActive (if model.CurrentFilm.IsSome then (m.SequenceId = model.CurrentFilm.Value) else false)
+                                          Dropdown.Item.Props [ OnClick ( fun _ -> dispatch (BondFilmSelected m)) ]
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
 
@@ -169,8 +174,8 @@ let view (model : Model) (dispatch : Msg -> unit) =
             [ Hero.head [ ]
                 [ Navbar.navbar [ ]
                     [ Container.container [ ]
-                        [ navBrand
-                          navMenu ] ] ]
+                        [ navBrand (model.IsBurgerOpen) dispatch
+                          navMenu (model.IsBurgerOpen)] ] ]
               Hero.body [ ]
                 [ Container.container [ Container.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]
                     [ Heading.p [ ]
