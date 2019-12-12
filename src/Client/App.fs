@@ -21,6 +21,7 @@ type Model =
       BondFilm : BondFilm option
       BondFilmList : BondFilm list option
       CurrentFilm : int option
+      IsBurgerOpen : bool
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -28,12 +29,13 @@ type Model =
 type Msg =
 | BondFilmListLoaded of BondFilm list
 | BondFilmSelected of BondFilm
+| ToggleBurger
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None }
+    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false }
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -50,8 +52,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, BondFilmListLoaded films ->
         let nextModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = Some films; CurrentFilm = None }
         nextModel, Cmd.none
-    | _ -> currentModel, Cmd.none
-
+    | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
 
 let safeComponents =
     let components =
@@ -78,15 +79,22 @@ let safeComponents =
           str " powered by: "
           components ]
 
-let navBrand =
+let navBrand isBurgerOpen dispatch =
     Navbar.Brand.div [ ]
         [ Navbar.Item.a
             [ Navbar.Item.Props [] ]
             [ img [ Src "007_tranparent.png"
-                    Alt "Logo" ] ] ]
+                    Alt "Logo" ] ]
+          Navbar.burger [ Modifiers [ ]
+                          CustomClass (if isBurgerOpen then "is-active" else "")
+                          Props [
+                            OnClick (fun _ -> dispatch ToggleBurger) ] ]
+                        [ span [ ] [ ]
+                          span [ ] [ ]
+                          span [ ] [ ] ] ]
 
-let navMenu =
-    Navbar.menu [ ]
+let navMenu isBurgerOpen =
+    Navbar.menu [ Navbar.Menu.IsActive isBurgerOpen ]
         [ Navbar.End.div [ ]
             [ Navbar.Item.a [ ]
                 [
@@ -126,13 +134,55 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                   for m in films do
                                     yield Dropdown.Item.a
                                       [
-                                          Dropdown.Item.IsActive (model.CurrentFilm |> Option.fold (fun _ id -> id = m.SequenceId) false)
-                                          Dropdown.Item.Props
-                                            [
-                                              OnClick ( fun _ -> dispatch (BondFilmSelected m))
-                                            ]
+                                          Dropdown.Item.IsActive (if model.CurrentFilm.IsSome then (m.SequenceId = model.CurrentFilm.Value) else false)
+                                          Dropdown.Item.Props [ OnClick ( fun _ -> dispatch (BondFilmSelected m)) ]
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
+
+
+let characterCard filmId character =
+  let imgURI = character.ImageURI |> Option.defaultValue ""
+  let heading = character.Name
+  let body = sprintf "Played by %s.%s is ..." character.Actor character.Name
+  Column.column [ Column.Width (Screen.All, Column.Is4) ]
+    [ Card.card [ ]
+        [
+          Card.content [ ]
+            [ Content.content [ ]
+                [
+                    Media.media []
+                        [
+                            Media.left [ ]
+                                [
+                                    Image.image [ Image.Is64x64 ] [ img [ Src imgURI ] ]
+                                ]
+                            Media.content []
+                                [
+                                   h4 [ ] [ str heading ]
+                                ]
+                        ]
+                    Level.level []
+                        [
+                            p [ ] [ str body ]
+                        ]
+                ] ] ] ]
+
+let characters (model : Model) =
+    let filmId, characterList = model.BondFilm |> Option.fold (fun bfCs bf -> bf.SequenceId, [ bf.Bond; bf.M; bf.Q ]) (0,[])
+
+    let ccs = characterList
+              |> Seq.choose id
+              |> Seq.map (characterCard filmId)
+
+    if ccs |> Seq.isEmpty
+    then
+      Columns.columns [ Columns.CustomClass "features" ] []
+    else
+      Columns.columns [ Columns.CustomClass "features" ]
+        [
+          for cc in ccs do
+            yield cc
+        ]
 
 
 let filmInfo (model : Model)=
@@ -148,7 +198,10 @@ let filmInfo (model : Model)=
         p [ ClassName "subtitle"]
           [
             yield (model.BondFilm |> Option.fold (fun _ b -> str b.Synopsis) (str "\"No Mr. Bond, I expect you to choose a film!\""))
-          ] ]
+          ]
+        characters model
+      ]
+
 
 let footerContainer =
     Container.container [ ]
@@ -169,8 +222,8 @@ let view (model : Model) (dispatch : Msg -> unit) =
             [ Hero.head [ ]
                 [ Navbar.navbar [ ]
                     [ Container.container [ ]
-                        [ navBrand
-                          navMenu ] ] ]
+                        [ navBrand (model.IsBurgerOpen) dispatch
+                          navMenu (model.IsBurgerOpen)] ] ]
               Hero.body [ ]
                 [ Container.container [ Container.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]
                     [ Heading.p [ ]

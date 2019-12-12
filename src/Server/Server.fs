@@ -9,11 +9,35 @@ open Saturn
 open Shared
 
 open Microsoft.WindowsAzure.Storage
+open Microsoft.Azure.Cosmos.Table 
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
 let publicPath = tryGetEnv "public_path" |> Option.defaultValue "../Client/public" |> Path.GetFullPath
 let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
+
+let storageAccount = CloudStorageAccount.Parse(storageConnString)
+// Create the table client.
+let tableClient = storageAccount.CreateCloudTableClient()
+
+let table = tableClient.GetTableReference("BondFilm")
+
+let query =
+    TableQuery().Where(
+        TableQuery.GenerateFilterCondition(
+            "PartitionKey", QueryComparisons.Equal, "BondFilm"))
+
+let getEnemies bondFilmSequenceId =
+    tableClient.GetTableReference("TheEnemy")
+               .ExecuteQuery(
+                   TableQuery().Where(sprintf "PartitionKey eq '%d'" bondFilmSequenceId))
+    |> Seq.map (fun e -> { Name = e.Properties.["Character"].StringValue; Actor = e.Properties.["Actor"].StringValue; ImageURI = None })
+
+let getGirls bondFilmSequenceId =
+    tableClient.GetTableReference("TheGirls")
+               .ExecuteQuery(
+                   TableQuery().Where(sprintf "PartitionKey eq '%d'" bondFilmSequenceId))
+    |> Seq.map (fun e -> { Name = e.Properties.["Character"].StringValue; Actor = e.Properties.["Actor"].StringValue; ImageURI = None })
 
 let port =
     "SERVER_PORT"
@@ -22,10 +46,34 @@ let port =
 let webApp = router {
     get "/api/films" (fun next ctx ->
         task {
-            let movieList = [ {SequenceId = 1; Title = "Dr. No"; Synopsis = "Dr.No synopsis"; Bond = "Sean Connery"; M = Some "Bernard Lee"; Q = None; TheEnemy = [{ Name = "Dr. No"; Actor = "Joseph Wiseman"}]; TheGirls = [{Name = "Honey Ryder"; Actor = "Ursula Andress"}]}
-                              {SequenceId = 2; Title = "From Russia with Love"; Synopsis = "From Russia with Love synopsis"; Bond = "Sean Connery"; M = Some "Bernard Lee"; Q = None; TheEnemy = [{ Name = "Grant"; Actor = "Robert Shaw"};{ Name = "Rosa Klebb"; Actor = "Lotte Lenya"}]; TheGirls = [{Name = "Tatiana Romanova"; Actor = "Daniela Bianchi"}]}
-                              {SequenceId = 3; Title = "Goldfinger"; Synopsis = "Goldfinger synopsis"; Bond = "Sean Connery"; M = Some "Bernard Lee"; Q = Some "Desmond Llewelyn"; TheEnemy = [{ Name = "Auric Goldfinger"; Actor = "Gert Frobe"}]; TheGirls = [{Name = "Pussy Galore"; Actor = "Honor Blackman"}]} ]
+            let getImgURI filmId character = AzureServices.getBondMediaCharacterURI (string filmId) character
+            let movieList = table.ExecuteQuery(query)
+                            |> Seq.map (fun f ->
+                                            let sequenceId = int f.RowKey
+                                            let title = if f.Properties.ContainsKey("Title") then f.Properties.["Title"].StringValue else ""
+                                            let synopsis = if f.Properties.ContainsKey("Synopsis") then f.Properties.["Synopsis"].StringValue else ""
+                                            let bond = if f.Properties.ContainsKey("Bond") then f.Properties.["Bond"].StringValue else ""
+                                            let m = if f.Properties.ContainsKey("M") then Some (f.Properties.["M"].StringValue) else None
+                                            let q = if f.Properties.ContainsKey("Q") then Some (f.Properties.["Q"].StringValue) else None
+                                            let theEnemy = getEnemies sequenceId |> Seq.toList
+                                            let theGirls = getGirls sequenceId |> Seq.toList
+
+                                            {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
+                                             Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
+                                             M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
+                                             Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
+                                             TheEnemy = theEnemy; TheGirls = theGirls})
+                            |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
+
             return! json movieList next ctx
+        })
+    getf "/api/list-media/%s" (fun filmId next ctx ->
+        task {
+            return! json (AzureServices.listBondMedia filmId) next ctx
+        })
+    getf "/api/media-item-character/%s/%s" (fun (filmId, character) next ctx ->
+        task {
+            return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
         })
 }
 
