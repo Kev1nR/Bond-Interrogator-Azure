@@ -12,4 +12,3 @@ type BondFilm = {
     TheEnemy: Character list
     TheGirls: Character list
 }
-

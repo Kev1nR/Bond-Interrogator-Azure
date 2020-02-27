@@ -45,12 +45,17 @@ let init () : Model * Cmd<Msg> =
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel.BondFilmList, msg with
-    | Some _, BondFilmSelected b ->
+    | _, BondFilmSelected b ->
         printf "BondFilmSelected msg"
         let nextModel = { currentModel with BondFilm = Some b; CurrentFilm = Some b.SequenceId }
         nextModel, Cmd.none
     | _, BondFilmListLoaded films ->
-        let nextModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = Some films; CurrentFilm = None }
+        let nextModel = { ValidationError = None
+                          ServerState = Loading
+                          BondFilm = None
+                          BondFilmList = Some films
+                          CurrentFilm = None
+                          IsBurgerOpen = false }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
 

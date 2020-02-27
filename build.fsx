@@ -133,6 +133,8 @@ Target.create "ArmTemplate" (fun _ ->
     let environment = Environment.environVarOrDefault "environment" (Guid.NewGuid().ToString().ToLower().Split '-' |> Array.head)
     let armTemplate = @"arm-template.json"
     let resourceGroupName = "bond-interrogator-" + environment
+    let storageaccountname = Environment.environVarOrDefault "storageaccountname" ""
+    let storageaccountkey = Environment.environVarOrDefault "storageaccountkey" ""
 
     let authCtx =
         // You can safely replace these with your own subscription and client IDs hard-coded into this script.
@@ -154,6 +156,8 @@ Target.create "ArmTemplate" (fun _ ->
           Parameters =
               Simple
                   [ "environment", ArmString environment
+                    "storageaccountname", ArmString storageaccountname
+                    "storageaccountkey", ArmString storageaccountkey
                     "location", ArmString location
                     "pricingTier", ArmString pricingTier ]
           DeploymentMode = Incremental }

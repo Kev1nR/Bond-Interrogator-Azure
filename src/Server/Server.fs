@@ -9,14 +9,14 @@ open Saturn
 open Shared
 
 open Microsoft.WindowsAzure.Storage
-open Microsoft.Azure.Cosmos.Table 
+open Microsoft.Azure.Cosmos.Table
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
 let publicPath = tryGetEnv "public_path" |> Option.defaultValue "../Client/public" |> Path.GetFullPath
-let storageAccount = tryGetEnv "STORAGE_CONNECTIONSTRING" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
+let storageConnectionString = tryGetEnv "CONNECT_STR"
+let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopmentStorage=true" |> CloudStorageAccount.Parse
 
-let storageAccount = CloudStorageAccount.Parse(storageConnString)
 // Create the table client.
 let tableClient = storageAccount.CreateCloudTableClient()
 
