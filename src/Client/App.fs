@@ -222,7 +222,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
     div [ ]
         [ Hero.hero
             [ Hero.Color IsPrimary
-              Hero.IsMedium
+              Hero.IsHalfHeight
               Hero.IsBold ]
             [ Hero.head [ ]
                 [ Navbar.navbar [ ]
