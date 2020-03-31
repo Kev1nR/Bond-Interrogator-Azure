@@ -145,7 +145,7 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
 
 
-let characterCard filmId character =
+let characterCard character =
   let imgURI = character.ImageURI |> Option.defaultValue ""
   let heading = character.Name
   let body = sprintf "Played by %s.%s is ..." character.Actor character.Name
@@ -173,11 +173,11 @@ let characterCard filmId character =
                 ] ] ] ]
 
 let characters (model : Model) =
-    let filmId, characterList = model.BondFilm |> Option.fold (fun bfCs bf -> bf.SequenceId, [ bf.Bond; bf.M; bf.Q ]) (0,[])
+    let characterList = model.BondFilm |> Option.fold (fun _ bf -> [ bf.Bond; bf.M; bf.Q ]) ([])
 
     let ccs = characterList
               |> Seq.choose id
-              |> Seq.map (characterCard filmId)
+              |> Seq.map (characterCard)
 
     if ccs |> Seq.isEmpty
     then
