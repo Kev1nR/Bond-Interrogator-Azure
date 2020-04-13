@@ -22,6 +22,7 @@ type Model =
       BondFilmList : BondFilm list option
       CurrentFilm : int option
       IsBurgerOpen : bool
+      Review : int
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -30,12 +31,14 @@ type Msg =
 | BondFilmListLoaded of BondFilm list
 | BondFilmSelected of BondFilm
 | ToggleBurger
+| AddReview of int
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
+let inline pushReview x = Fetch.post ("/api/add-review", "{value: 3}")
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false }
+    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false; Review = 0 }
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -55,9 +58,13 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           BondFilm = None
                           BondFilmList = Some films
                           CurrentFilm = None
-                          IsBurgerOpen = false }
+                          IsBurgerOpen = false
+                          Review = 0 }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
+    | _, AddReview r ->
+        pushReview currentModel |> ignore
+        { currentModel with Review = r }, Cmd.none
 
 let safeComponents =
     let components =
@@ -236,6 +243,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
                       Heading.p [ Heading.IsSubtitle ]
                           [ str "A SPECTRE agent's guide to the Bond film catalogue" ] ] ] ]
           dropDownList model dispatch
+          Button.button [ Button.OnClick (fun _ -> dispatch (AddReview 3) ) ]
+                    [ str "Add review" ]
+
 
           Container.container [ ]
             [ filmInfo model ]

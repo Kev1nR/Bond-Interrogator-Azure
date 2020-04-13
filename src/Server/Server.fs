@@ -41,7 +41,7 @@ let getGirls bondFilmSequenceId =
 
 let port =
     "SERVER_PORT"
-    |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
+    |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8086us
 
 let webApp = router {
     get "/api/films" (fun next ctx ->
@@ -74,6 +74,13 @@ let webApp = router {
     getf "/api/media-item-character/%s/%s" (fun (filmId, character) next ctx ->
         task {
             return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
+        })
+    post "/api/add-review" (fun next ctx ->
+        task {
+            let buffer = new System.Span<byte>()
+            let bufSize = ctx.Request.Body.Read(buffer)
+            printf "Req body %d %A" bufSize (buffer.ToArray())
+            return! json "3" next ctx
         })
 }
 
