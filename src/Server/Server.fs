@@ -77,10 +77,11 @@ let webApp = router {
         })
     post "/api/add-review" (fun next ctx ->
         task {
-            let buffer = new System.Span<byte>()
-            let bufSize = ctx.Request.Body.Read(buffer)
-            printf "Req body %d %A" bufSize (buffer.ToArray())
-            return! json "3" next ctx
+            use strm = new StreamReader(ctx.Request.Body)
+            let! conts = strm.ReadToEndAsync()
+            printfn "Body is %A " conts
+            let review = { SequenceId = 1; Rating = 5; Who = "Kevin"; Comment = "Really good"; PostedDate = Some (System.DateTime.Now) }
+            return! json review next ctx
         })
 }
 

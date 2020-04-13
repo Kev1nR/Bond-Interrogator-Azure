@@ -12,3 +12,11 @@ type BondFilm = {
     TheEnemy: Character list
     TheGirls: Character list
 }
+
+type Review = {
+    SequenceId: int
+    Rating: int
+    Who: string
+    Comment: string
+    PostedDate: System.DateTime option
+}
