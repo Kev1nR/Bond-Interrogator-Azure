@@ -8,8 +8,10 @@ open Thoth.Fetch
 open Fulma
 
 open Shared
+open Fable.Core.JS
 
 type ServerState = Idle | Loading | ServerError of string
+type ModalContent = Review | Character
 
 // The model holds data that you want to keep track of while the application is running
 // in this case, we are keeping track of selection of Bond films from the dropdown selector
@@ -22,6 +24,8 @@ type Model =
       BondFilmList : BondFilm list option
       CurrentFilm : int option
       IsBurgerOpen : bool
+      ShowModal: ModalContent option
+      ReviewModel : Review.Types.Model option
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -30,12 +34,24 @@ type Msg =
 | BondFilmListLoaded of BondFilm list
 | BondFilmSelected of BondFilm
 | ToggleBurger
+| CloseModal
+| AddReview of BondFilm
+| ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
+let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false }
+    let initialModel = {
+        ValidationError = None;
+        ServerState = Loading;
+        BondFilm = None;
+        BondFilmList = None;
+        CurrentFilm = None;
+        IsBurgerOpen = false;
+        ShowModal = None
+        ReviewModel = None}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -55,9 +71,30 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           BondFilm = None
                           BondFilmList = Some films
                           CurrentFilm = None
-                          IsBurgerOpen = false }
+                          IsBurgerOpen = false
+                          ShowModal = None
+                          ReviewModel = None
+                        }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
+    | _, CloseModal -> { currentModel with ShowModal = None }, Cmd.none
+    | _, AddReview f ->
+        let nextModel = { currentModel with ShowModal = Some Review; ReviewModel = Some (Review.State.init f) }
+        nextModel, Cmd.none
+    | _, ReviewMsgHandler (childMsg, childModel) ->
+            match childMsg with
+            | Review.Types.SubmitReview r ->
+                printf "Got a SubmitReview message with value %A" r
+                let nextChildModel, cmd = Review.State.update childMsg childModel
+                printfn "Review model after submit %A" nextChildModel
+                { currentModel with ReviewModel = Some nextChildModel; ShowModal = None }, Cmd.none
+            | Review.Types.CancelReview ->
+                printf "Got a CancelReview message"
+                { currentModel with ShowModal = None }, Cmd.none
+            | _ ->
+                printf "Got another ReviewMsg %A" childMsg
+                let nextChildModel, _ = Review.State.update childMsg childModel
+                { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
 
 let safeComponents =
     let components =
@@ -144,7 +181,6 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
 
-
 let characterCard filmId character =
   let imgURI = character.ImageURI |> Option.defaultValue ""
   let heading = character.Name
@@ -189,20 +225,27 @@ let characters (model : Model) =
             yield cc
         ]
 
-
 let filmInfo (model : Model)=
     Column.column
       [ Column.CustomClass "intro"
         Column.Width (Screen.All, Column.Is8)
         Column.Offset (Screen.All, Column.Is2) ]
-      [ h2 [ ClassName "title" ]
+      [ h2 [  ClassName "title" ]
           [
             yield (model.BondFilm |> Option.fold (fun _ b -> str b.Title) (str "\"Do you expect me to talk?\""))
           ]
-        br [ ]
         p [ ClassName "subtitle"]
           [
-            yield (model.BondFilm |> Option.fold (fun _ b -> str b.Synopsis) (str "\"No Mr. Bond, I expect you to choose a film!\""))
+            let subtitleContent =
+                model.BondFilm
+                |> Option.fold (fun _ b ->
+                    div [] [
+                        //Client.Components.ratingComponent b.Reviews
+                        br []
+                        p [] [ str b.Synopsis ] ])
+                   (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
+
+            yield subtitleContent
           ]
         characters model
       ]
@@ -236,6 +279,28 @@ let view (model : Model) (dispatch : Msg -> unit) =
                       Heading.p [ Heading.IsSubtitle ]
                           [ str "A SPECTRE agent's guide to the Bond film catalogue" ] ] ] ]
           dropDownList model dispatch
+
+          Container.container []
+            [
+                match model.BondFilm with
+                | Some bf ->
+                   yield  Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ]
+                | None -> yield p [] []
+            ]
+
+          Container.container []
+            [
+              match model.ShowModal with
+              | Some Review ->
+                  printfn "Show modal for review"
+                  let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
+                  yield reviewContent
+              | Some Character ->
+                  printfn "Show modal for character"
+                  yield (str "This will be character content")
+              | None ->
+                  printfn "Don't show modal"
+            ]
 
           Container.container [ ]
             [ filmInfo model ]
