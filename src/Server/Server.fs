@@ -39,6 +39,22 @@ let getGirls bondFilmSequenceId =
                    TableQuery().Where(sprintf "PartitionKey eq '%d'" bondFilmSequenceId))
     |> Seq.map (fun e -> { Name = e.Properties.["Character"].StringValue; Actor = e.Properties.["Actor"].StringValue; ImageURI = None })
 
+let getReviews bondFilmSequenceId =
+    tableClient.GetTableReference("Review")
+               .ExecuteQuery(
+                   TableQuery().Where(sprintf "PartitionKey eq '%d'" bondFilmSequenceId))
+    |> Seq.map (fun e -> { SequenceId = bondFilmSequenceId; Rating = e.Properties.["Rating"].Int32Value.Value; Who = e.Properties.["RowKey"].StringValue;
+                           Comment = e.Properties.["Comment"].StringValue; PostedDate = e.Properties.["PostedDate"].DateTime.Value})
+
+let postReview review =
+    table.ExecuteQuery(
+        TableQuery().Where(sprintf "PartitionKey eq '%d'" review.SequenceId))
+
+    //TableOperation.InsertOrReplace()
+
+
+
+
 let port =
     "SERVER_PORT"
     |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8086us
@@ -62,7 +78,8 @@ let webApp = router {
                                              Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
                                              M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
                                              Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-                                             TheEnemy = theEnemy; TheGirls = theGirls})
+                                             TheEnemy = theEnemy; TheGirls = theGirls
+                                             Reviews = []})
                             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
             return! json movieList next ctx
@@ -80,7 +97,7 @@ let webApp = router {
             use strm = new StreamReader(ctx.Request.Body)
             let! conts = strm.ReadToEndAsync()
             printfn "Body is %A " conts
-            let review = { SequenceId = 1; Rating = 5; Who = "Kevin"; Comment = "Really good"; PostedDate = Some (System.DateTime.Now) }
+            let review = { SequenceId = 1; Rating = 5; Who = "Kevin"; Comment = "Really good"; PostedDate = System.DateTime.Now }
             return! json review next ctx
         })
 }
