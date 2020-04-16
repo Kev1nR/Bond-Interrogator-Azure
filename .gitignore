@@ -14,8 +14,7 @@ release.sh
 *.DotSettings.user
 deploy
 .ionide/
+Bond-Interrogator-Azure.wiki/
 
-.fake
-.ionide
 .fake
 .ionide
