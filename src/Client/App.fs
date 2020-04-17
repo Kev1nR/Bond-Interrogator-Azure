@@ -8,6 +8,7 @@ open Thoth.Fetch
 open Fulma
 
 open Shared
+open Fable.Core.JS
 
 type ServerState = Idle | Loading | ServerError of string
 
@@ -22,7 +23,6 @@ type Model =
       BondFilmList : BondFilm list option
       CurrentFilm : int option
       IsBurgerOpen : bool
-      Review : Review option
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -34,7 +34,7 @@ type Msg =
 | AddReview of Review
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
-let inline pushReview review = Fetch.post ("/api/add-review", review)
+let pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
@@ -59,13 +59,13 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           BondFilmList = Some films
                           CurrentFilm = None
                           IsBurgerOpen = false
-                          Review = None }
+                        }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, AddReview r ->
-        let nextModel = { currentModel with Review = Some r }
-        let addReviewCmd = Cmd.OfPromise.perform pushReview nextModel BondFilmListLoaded
-        nextModel, addReviewCmd
+        //let nextModel = { currentModel with Review = Some r }
+        let addReviewCmd = Cmd.OfPromise.perform pushReview r BondFilmSelected
+        currentModel, addReviewCmd
 
 let safeComponents =
     let components =
