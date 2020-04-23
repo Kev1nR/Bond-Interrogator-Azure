@@ -34,11 +34,11 @@ type Msg =
 | AddReview of Review
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
-let pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
+let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false; Review = None }
+    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false  }
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd

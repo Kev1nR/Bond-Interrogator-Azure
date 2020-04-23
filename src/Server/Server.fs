@@ -6,6 +6,7 @@ open Microsoft.Extensions.DependencyInjection
 open FSharp.Control.Tasks.V2
 open Giraffe
 open Saturn
+open Thoth.Json
 open Shared
 
 open Microsoft.WindowsAzure.Storage
@@ -22,7 +23,7 @@ let tableClient = storageAccount.CreateCloudTableClient()
 
 let table = tableClient.GetTableReference("BondFilm")
 
-let query =
+let getBondfilms =
     TableQuery().Where(
         TableQuery.GenerateFilterCondition(
             "PartitionKey", QueryComparisons.Equal, "BondFilm"))
@@ -47,6 +48,33 @@ let getReviews bondFilmSequenceId =
                            Comment = e.Properties.["Comment"].StringValue; PostedDate = e.Properties.["PostedDate"].DateTime.Value})
 
 let getImgURI filmId character = AzureServices.getBondMediaCharacterURI (string filmId) character
+
+let getBondFilm (filmId : int) bondGirlsFn bondFoesFn reviewsFn =
+    let tq = 
+        TableQuery().Where(
+            TableQuery.CombineFilters(
+                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "BondFilm"),
+                TableOperators.And,
+                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, filmId.ToString())))
+
+    let bondData = table.ExecuteQuery(tq) |> Seq.head
+    
+    let sequenceId = int bondData.RowKey
+    let title = if bondData.Properties.ContainsKey("Title") then bondData.Properties.["Title"].StringValue else ""
+    let synopsis = if bondData.Properties.ContainsKey("Synopsis") then bondData.Properties.["Synopsis"].StringValue else ""
+    let bond = if bondData.Properties.ContainsKey("Bond") then bondData.Properties.["Bond"].StringValue else ""
+    let m = if bondData.Properties.ContainsKey("M") then Some (bondData.Properties.["M"].StringValue) else None
+    let q = if bondData.Properties.ContainsKey("Q") then Some (bondData.Properties.["Q"].StringValue) else None
+    let theEnemy = bondFoesFn sequenceId |> Seq.toList
+    let theGirls = bondGirlsFn sequenceId |> Seq.toList
+    let reviews = reviewsFn sequenceId |> Seq.toList
+
+    {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
+     Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
+     M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
+     Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
+     TheEnemy = theEnemy; TheGirls = theGirls
+     Reviews = reviews}
 
 let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn reviewsFn =
     bondDataFn 
@@ -85,7 +113,7 @@ let port =
 let webApp = router {
     get "/api/films" (fun next ctx ->
         task {
-            let movieList = buildMovieList (table.ExecuteQuery(query)) getGirls getEnemies getReviews
+            let movieList = buildMovieList (table.ExecuteQuery(getBondfilms)) getGirls getEnemies getReviews
             
             return! json movieList next ctx
         })
@@ -102,8 +130,16 @@ let webApp = router {
             use strm = new StreamReader(ctx.Request.Body)
             let! conts = strm.ReadToEndAsync()
             printfn "Body is %A " conts
-            let review = { SequenceId = 1; Rating = 5; Who = "Kevin"; Comment = "Really good"; PostedDate = System.DateTime.Now }
-            return! json review next ctx
+            let review = Net.Decode.Auto.fromString<Review>(conts)
+            printfn "Decoded review -> %A" review
+            
+            match review with
+            | Ok r -> 
+                let bf = getBondFilm (r.SequenceId) getGirls getEnemies getReviews
+                printfn "Retreived film -> %A" bf
+                return! json bf next ctx
+            | Error err -> 
+                return! json (Error err) next ctx
         })
 }
 
