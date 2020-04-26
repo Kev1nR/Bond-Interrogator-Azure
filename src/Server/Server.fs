@@ -21,15 +21,12 @@ let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopm
 // Create the table client.
 let tableClient = storageAccount.CreateCloudTableClient()
 
-type ReviewEntity(sequenceId: int,
-                  rating: int,
-                  who: string,
-                  comment: string) =
-    inherit TableEntity(partitionKey = sequenceId.ToString(), rowKey = who)
-    new() = ReviewEntity(null, null, null, null)
-    member val Rating = rating with get, set
-    member val Comment = comment with get, set
-    member val PostedDate = System.DateTime.Now with get, set
+type ReviewEntity(review) =
+    inherit TableEntity(partitionKey = review.SequenceId.ToString(), rowKey = review.Who)
+    new() = ReviewEntity(null)
+    member val Rating = review.Rating with get, set
+    member val Comment = review.Comment with get, set
+    member val PostedDate = review.PostedDate with get, set
 
 let bondFilmTable = tableClient.GetTableReference("BondFilm")
 let reviewTable = tableClient.GetTableReference("Review")
