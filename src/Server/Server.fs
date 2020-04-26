@@ -21,7 +21,18 @@ let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopm
 // Create the table client.
 let tableClient = storageAccount.CreateCloudTableClient()
 
-let table = tableClient.GetTableReference("BondFilm")
+type ReviewEntity(sequenceId: int,
+                  rating: int,
+                  who: string,
+                  comment: string) =
+    inherit TableEntity(partitionKey = sequenceId.ToString(), rowKey = who)
+
+    member val Rating = rating with get, set
+    member val Comment = comment with get, set
+    member val PostedDate = System.DateTime.Now with get
+
+let bondFilmTable = tableClient.GetTableReference("BondFilm")
+let reviewTable = tableClient.GetTableReference("Review")
 
 let getBondfilms =
     TableQuery().Where(
@@ -50,15 +61,15 @@ let getReviews bondFilmSequenceId =
 let getImgURI filmId character = AzureServices.getBondMediaCharacterURI (string filmId) character
 
 let getBondFilm (filmId : int) bondGirlsFn bondFoesFn reviewsFn =
-    let tq = 
+    let tq =
         TableQuery().Where(
             TableQuery.CombineFilters(
                 TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "BondFilm"),
                 TableOperators.And,
                 TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, filmId.ToString())))
 
-    let bondData = table.ExecuteQuery(tq) |> Seq.head
-    
+    let bondData = bondFilmTable.ExecuteQuery(tq) |> Seq.head
+
     let sequenceId = int bondData.RowKey
     let title = if bondData.Properties.ContainsKey("Title") then bondData.Properties.["Title"].StringValue else ""
     let synopsis = if bondData.Properties.ContainsKey("Synopsis") then bondData.Properties.["Synopsis"].StringValue else ""
@@ -77,7 +88,7 @@ let getBondFilm (filmId : int) bondGirlsFn bondFoesFn reviewsFn =
      Reviews = reviews}
 
 let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn reviewsFn =
-    bondDataFn 
+    bondDataFn
     |> Seq.map (fun f ->
                     let sequenceId = int f.RowKey
                     let title = if f.Properties.ContainsKey("Title") then f.Properties.["Title"].StringValue else ""
@@ -97,14 +108,17 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                      Reviews = reviews})
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
-let postReview review =
-    table.ExecuteQuery(
-        TableQuery().Where(sprintf "PartitionKey eq '%d'" review.SequenceId))
+let postReview (review : Review) =
+    let reviewEntity = ReviewEntity(review.SequenceId, review.Rating, review.Who, review.Comment)
 
-    //TableOperation.InsertOrReplace()
+    let insertReview = TableOperation.InsertOrReplace(reviewEntity)
 
+    let result = reviewTable.Execute(insertReview)
 
+    let bfs = bondFilmTable.ExecuteQuery(
+                TableQuery().Where(sprintf "PartitionKey eq '%d'" review.SequenceId))
 
+    bfs
 
 let port =
     "SERVER_PORT"
@@ -113,8 +127,8 @@ let port =
 let webApp = router {
     get "/api/films" (fun next ctx ->
         task {
-            let movieList = buildMovieList (table.ExecuteQuery(getBondfilms)) getGirls getEnemies getReviews
-            
+            let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies getReviews
+
             return! json movieList next ctx
         })
     getf "/api/list-media/%s" (fun filmId next ctx ->
@@ -132,13 +146,15 @@ let webApp = router {
             printfn "Body is %A " conts
             let review = Net.Decode.Auto.fromString<Review>(conts)
             printfn "Decoded review -> %A" review
-            
+
+            let postReviewResult = postReview review
             match review with
-            | Ok r -> 
+            | Ok r ->
+                let
                 let bf = getBondFilm (r.SequenceId) getGirls getEnemies getReviews
                 printfn "Retreived film -> %A" bf
                 return! json bf next ctx
-            | Error err -> 
+            | Error err ->
                 return! json (Error err) next ctx
         })
 }
