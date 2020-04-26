@@ -110,15 +110,9 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
 
 let postReview (review : Review) =
     let reviewEntity = ReviewEntity(review.SequenceId, review.Rating, review.Who, review.Comment)
-
     let insertReview = TableOperation.InsertOrReplace(reviewEntity)
-
     let result = reviewTable.Execute(insertReview)
-
-    let bfs = bondFilmTable.ExecuteQuery(
-                TableQuery().Where(sprintf "PartitionKey eq '%d'" review.SequenceId))
-
-    bfs
+    result
 
 let port =
     "SERVER_PORT"
