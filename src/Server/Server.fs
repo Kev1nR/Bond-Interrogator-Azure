@@ -26,10 +26,10 @@ type ReviewEntity(sequenceId: int,
                   who: string,
                   comment: string) =
     inherit TableEntity(partitionKey = sequenceId.ToString(), rowKey = who)
-
+    new() = ReviewEntity(null, null, null, null)
     member val Rating = rating with get, set
     member val Comment = comment with get, set
-    member val PostedDate = System.DateTime.Now with get
+    member val PostedDate = System.DateTime.Now with get, set
 
 let bondFilmTable = tableClient.GetTableReference("BondFilm")
 let reviewTable = tableClient.GetTableReference("Review")
