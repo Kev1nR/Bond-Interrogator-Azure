@@ -244,7 +244,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                       Heading.p [ Heading.IsSubtitle ]
                           [ str "A SPECTRE agent's guide to the Bond film catalogue" ] ] ] ]
           dropDownList model dispatch
-          Button.button [ Button.OnClick (fun _ -> dispatch (AddReview { SequenceId = 1; Rating = 5; Who = "Kevin"; Comment = "Really good UI"; PostedDate = System.DateTime.Now}) ) ]
+          Button.button [ Button.OnClick (fun _ -> dispatch (AddReview { SequenceId = 1; Rating = 5; Who = (sprintf "Kevin %d" System.DateTime.Now.Minute); Comment = "Really good UI"; PostedDate = System.DateTime.Now}) ) ]
                     [ str "Add review" ]
 
 

@@ -21,9 +21,9 @@ let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopm
 // Create the table client.
 let tableClient = storageAccount.CreateCloudTableClient()
 
-type ReviewEntity(review) =
+type ReviewEntity(review : Review) =
     inherit TableEntity(partitionKey = review.SequenceId.ToString(), rowKey = review.Who)
-    new() = ReviewEntity(null)
+    new() = ReviewEntity()
     member val Rating = review.Rating with get, set
     member val Comment = review.Comment with get, set
     member val PostedDate = review.PostedDate with get, set
@@ -106,10 +106,9 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
 let postReview (review : Review) =
-    let reviewEntity = ReviewEntity(review.SequenceId, review.Rating, review.Who, review.Comment)
-    let insertReview = TableOperation.InsertOrReplace(reviewEntity)
-    let result = reviewTable.Execute(insertReview)
-    result
+        let reviewEntity = ReviewEntity(review)
+        let insertReview = TableOperation.InsertOrReplace(reviewEntity)
+        reviewTable.Execute(insertReview) |> ignore
 
 let port =
     "SERVER_PORT"
@@ -138,10 +137,9 @@ let webApp = router {
             let review = Net.Decode.Auto.fromString<Review>(conts)
             printfn "Decoded review -> %A" review
 
-            let postReviewResult = postReview review
             match review with
             | Ok r ->
-                let
+                postReview r
                 let bf = getBondFilm (r.SequenceId) getGirls getEnemies getReviews
                 printfn "Retreived film -> %A" bf
                 return! json bf next ctx
