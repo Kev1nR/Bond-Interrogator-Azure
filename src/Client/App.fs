@@ -209,19 +209,23 @@ let filmInfo (model : Model)=
         br []
         p [ ClassName "subtitle"]
           [
-            yield (model.BondFilm
-                   |> Option.fold (fun _ b ->
-                        let rateSum = b.Reviews |> Seq.fold (fun acc r -> acc + r.Rating) 0
-                        let rateCount = b.Reviews |> List.length
-                        let ratingComponent =
-                            if rateCount = 0
-                            then
-                                sprintf "Be the first to review this film\n"
-                            else
-                                sprintf "Ave. %d rating, from %d reviews\n" (rateSum/rateCount) rateCount
+            let subtitleContent = //div [] [ str "Something" ]
+                model.BondFilm
+                |> Option.fold (fun _ b ->
+                    let rateSum = b.Reviews |> Seq.fold (fun acc r -> acc + r.Rating) 0
+                    let rateCount = b.Reviews |> List.length
+                    if rateCount = 0
+                    then
+                        div [] [
+                            p [] [ str "Be the first to review this film"]
+                            p [] [ str b.Synopsis]]
+                    else
+                        div [] [
+                            p [] [ str (sprintf "Something %d %d" rateSum rateCount)]
+                            p [] [ str b.Synopsis ]])
+                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
 
-                        str (sprintf "%s\n%s" ratingComponent b.Synopsis))
-                        (str "\"No Mr. Bond, I expect you to choose a film!\""))
+            yield subtitleContent
           ]
         characters model
       ]
