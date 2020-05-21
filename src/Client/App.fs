@@ -152,7 +152,6 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
 
-
 let characterCard filmId character =
   let imgURI = character.ImageURI |> Option.defaultValue ""
   let heading = character.Name
@@ -197,7 +196,6 @@ let characters (model : Model) =
             yield cc
         ]
 
-
 let filmInfo (model : Model)=
     Column.column
       [ Column.CustomClass "intro"
@@ -208,9 +206,22 @@ let filmInfo (model : Model)=
             yield (model.BondFilm |> Option.fold (fun _ b -> str b.Title) (str "\"Do you expect me to talk?\""))
           ]
         br [ ]
+        br []
         p [ ClassName "subtitle"]
           [
-            yield (model.BondFilm |> Option.fold (fun _ b -> str b.Synopsis) (str "\"No Mr. Bond, I expect you to choose a film!\""))
+            yield (model.BondFilm
+                   |> Option.fold (fun _ b ->
+                        let rateSum = b.Reviews |> Seq.fold (fun acc r -> acc + r.Rating) 0
+                        let rateCount = b.Reviews |> List.length
+                        let ratingComponent =
+                            if rateCount = 0
+                            then
+                                sprintf "Be the first to review this film\n"
+                            else
+                                sprintf "Ave. %d rating, from %d reviews\n" (rateSum/rateCount) rateCount
+
+                        str (sprintf "%s\n%s" ratingComponent b.Synopsis))
+                        (str "\"No Mr. Bond, I expect you to choose a film!\""))
           ]
         characters model
       ]
