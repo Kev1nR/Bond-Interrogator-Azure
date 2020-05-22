@@ -201,29 +201,20 @@ let filmInfo (model : Model)=
       [ Column.CustomClass "intro"
         Column.Width (Screen.All, Column.Is8)
         Column.Offset (Screen.All, Column.Is2) ]
-      [ h2 [ ClassName "title" ]
+      [ h2 [  ClassName "title" ]
           [
             yield (model.BondFilm |> Option.fold (fun _ b -> str b.Title) (str "\"Do you expect me to talk?\""))
           ]
-        br [ ]
-        br []
         p [ ClassName "subtitle"]
           [
-            let subtitleContent = //div [] [ str "Something" ]
+            let subtitleContent =
                 model.BondFilm
                 |> Option.fold (fun _ b ->
-                    let rateSum = b.Reviews |> Seq.fold (fun acc r -> acc + r.Rating) 0
-                    let rateCount = b.Reviews |> List.length
-                    if rateCount = 0
-                    then
-                        div [] [
-                            p [] [ str "Be the first to review this film"]
-                            p [] [ str b.Synopsis]]
-                    else
-                        div [] [
-                            p [] [ str (sprintf "Something %d %d" rateSum rateCount)]
-                            p [] [ str b.Synopsis ]])
-                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
+                    div [] [
+                        Client.Components.ratingComponent b.Reviews b.Synopsis
+                        br []
+                        p [] [ str b.Synopsis ] ])
+                   (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
 
             yield subtitleContent
           ]
