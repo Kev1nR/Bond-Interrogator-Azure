@@ -211,7 +211,7 @@ let filmInfo (model : Model)=
                 model.BondFilm
                 |> Option.fold (fun _ b ->
                     div [] [
-                        Client.Components.ratingComponent b.Reviews b.Synopsis
+                        Client.Components.ratingComponent b.Reviews
                         br []
                         p [] [ str b.Synopsis ] ])
                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
