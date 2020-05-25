@@ -8,6 +8,8 @@
         <None Include="index.html" />
         <None Include="paket.references" />
         <Compile Include="..\Shared\Shared.fs" />
+        <Compile Include=".\Child\Types.fs" />
+        <Compile Include=".\Child\State.fs" />
         <Compile Include="Version.fs" />
         <Compile Include="components.fs" />
         <Compile Include="App.fs" />
