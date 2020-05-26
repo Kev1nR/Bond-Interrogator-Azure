@@ -1,4 +1,4 @@
-module Child
+module Child.Types
 
 type Model =
     {
