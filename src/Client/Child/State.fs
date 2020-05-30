@@ -10,9 +10,11 @@ let init () : Model * Cmd<Msg> =
 
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
-    | SimpleMessage -> 
+    | SimpleMessage ->
         printfn "No change just notifying that %s has value %d" currentModel.Name currentModel.Value
         currentModel, Cmd.none
-    | ValueMessage v -> 
-        printfn "Changing %s to have value %d" currentModel.Name v
-        { currentModel with Value = v }, Cmd.none
+    | ValueMessage v ->
+        let newValue = currentModel.Value + v
+        let nextModel = { currentModel with Value = newValue }
+        printfn "Changing model to %A" nextModel
+        nextModel, Cmd.none

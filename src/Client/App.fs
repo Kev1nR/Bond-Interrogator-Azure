@@ -23,6 +23,8 @@ type Model =
       BondFilmList : BondFilm list option
       CurrentFilm : int option
       IsBurgerOpen : bool
+      ShowAddReview : bool
+      ChildModel : Child.Types.Model
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -32,13 +34,22 @@ type Msg =
 | BondFilmSelected of BondFilm
 | ToggleBurger
 | AddReview of Review
+| ReviewMsgHandler of Child.Types.Msg * Child.Types.Model
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { ValidationError = None; ServerState = Loading;  BondFilm = None; BondFilmList = None; CurrentFilm = None; IsBurgerOpen = false }
+    let initialModel = {
+        ValidationError = None;
+        ServerState = Loading;
+        BondFilm = None;
+        BondFilmList = None;
+        CurrentFilm = None;
+        IsBurgerOpen = false;
+        ShowAddReview = false
+        ChildModel = Child.State.init ()). }
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -59,13 +70,17 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           BondFilmList = Some films
                           CurrentFilm = None
                           IsBurgerOpen = false
+                          ShowAddReview = false
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, AddReview r ->
-        //let nextModel = { currentModel with Review = Some r }
-        let addReviewCmd = Cmd.OfPromise.perform pushReview r BondFilmSelected
-        currentModel, addReviewCmd
+        let nextModel = { currentModel with ShowAddReview = true }
+        //let addReviewCmd = Cmd.OfPromise.perform pushReview r BondFilmSelected
+        nextModel, Cmd.none
+    | _, ReviewMsgHandler (childMsg, childModel) ->
+            Child.State.update childMsg childModel |> ignore
+            currentModel, Cmd.none
 
 let safeComponents =
     let components =
@@ -250,9 +265,14 @@ let view (model : Model) (dispatch : Msg -> unit) =
                       Heading.p [ Heading.IsSubtitle ]
                           [ str "A SPECTRE agent's guide to the Bond film catalogue" ] ] ] ]
           dropDownList model dispatch
+
           Button.button [ Button.OnClick (fun _ -> dispatch (AddReview { SequenceId = 1; Rating = 5; Who = (sprintf "Kevin %d" System.DateTime.Now.Minute); Comment = "Really good UI"; PostedDate = System.DateTime.Now}) ) ]
                     [ str "Add review" ]
 
+          Container.container []
+            [ if model.ShowAddReview
+              then
+                yield Child.View.view { Name = "Fred"; Value = 23 } (fun msg -> dispatch (ReviewMsgHandler (msg, { Name = "Fred"; Value = 23 }))) ]
 
           Container.container [ ]
             [ filmInfo model ]
