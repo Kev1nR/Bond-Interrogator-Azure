@@ -1,9 +1,10 @@
 module Child.Types
 
+open Shared
 type Model =
     {
-        Name: string
-        Value: int
+        FilmName: string
+        Review: Review
     }
 
 type Msg =
