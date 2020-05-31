@@ -22,12 +22,16 @@ let init film =
 
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
-    | SimpleMessage ->
-        printfn "No change just notifying that %s has value %d" currentModel.FilmName currentModel.Review.Rating
+    | HoverRating rate ->
+        printfn "No change just notifying that %s hovering over %d" currentModel.FilmName rate
         currentModel, Cmd.none
-    | ValueMessage v ->
-        let newReview = { currentModel.Review with Rating = v }
+    | SelectedRating rate ->
+        let newReview = { currentModel.Review with Rating = rate }
         let nextModel = { currentModel with Review = newReview }
         printfn "Changing model to %A" nextModel
-
         nextModel, Cmd.none
+    | SubmitReview review ->
+        let nextModel = { currentModel with Review = review }
+        printfn "New review is %A" nextModel
+        nextModel, Cmd.none
+    | CancelReview -> currentModel, Cmd.none

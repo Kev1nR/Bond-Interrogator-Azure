@@ -8,5 +8,7 @@ type Model =
     }
 
 type Msg =
-    | SimpleMessage
-    | ValueMessage of int
+    | HoverRating of int
+    | SelectedRating of int
+    | SubmitReview of Review
+    | CancelReview
