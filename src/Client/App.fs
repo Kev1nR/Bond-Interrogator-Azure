@@ -49,7 +49,7 @@ let init () : Model * Cmd<Msg> =
         CurrentFilm = None;
         IsBurgerOpen = false;
         ShowAddReview = false
-        ChildModel = Child.State.init ()). }
+        ChildModel = Child.State.init ()}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -71,6 +71,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           CurrentFilm = None
                           IsBurgerOpen = false
                           ShowAddReview = false
+                          ChildModel = Child.State.init()
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
@@ -79,8 +80,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         //let addReviewCmd = Cmd.OfPromise.perform pushReview r BondFilmSelected
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
-            Child.State.update childMsg childModel |> ignore
-            currentModel, Cmd.none
+            let nextChildModel, cmd = Child.State.update childMsg childModel
+            { currentModel with ChildModel = nextChildModel }, Cmd.none
 
 let safeComponents =
     let components =
@@ -272,7 +273,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
           Container.container []
             [ if model.ShowAddReview
               then
-                yield Child.View.view { Name = "Fred"; Value = 23 } (fun msg -> dispatch (ReviewMsgHandler (msg, { Name = "Fred"; Value = 23 }))) ]
+                yield Child.View.view model.ChildModel (fun msg -> dispatch (ReviewMsgHandler (msg, model.ChildModel))) ]
 
           Container.container [ ]
             [ filmInfo model ]

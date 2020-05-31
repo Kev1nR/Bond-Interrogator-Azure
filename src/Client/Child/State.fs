@@ -4,9 +4,9 @@ open Child.Types
 open Shared
 open Elmish
 
-let init () : Model * Cmd<Msg> =
+let init () : Model =
     let initialModel = {Name = "Review1"; Value = 0 }
-    initialModel, Cmd.none
+    initialModel
 
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
