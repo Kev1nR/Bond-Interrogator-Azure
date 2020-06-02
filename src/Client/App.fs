@@ -88,6 +88,14 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                 printf "Got a SelectedRating message with value %d" r
                 let nextChildModel, _ = Child.State.update childMsg childModel
                 { currentModel with ChildModel = Some nextChildModel }, Cmd.none
+            | Child.Types.UserFieldChanged user ->
+                printf "Got a USerChanged message with value %s" user
+                let nextChildModel, _ = Child.State.update childMsg childModel
+                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
+            | Child.Types.CommentFieldChanged comment ->
+                printf "Got a CommentFieldChanged message with value %s" comment
+                let nextChildModel, _ = Child.State.update childMsg childModel
+                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
             | Child.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, cmd = Child.State.update childMsg childModel

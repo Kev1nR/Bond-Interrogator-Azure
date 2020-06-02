@@ -10,5 +10,7 @@ type Model =
 type Msg =
     | HoverRating of int
     | SelectedRating of int
+    | UserFieldChanged of string
+    | CommentFieldChanged of string
     | SubmitReview of Review
     | CancelReview

@@ -30,6 +30,16 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let nextModel = { currentModel with Review = newReview }
         printfn "Changing model to %A" nextModel
         nextModel, Cmd.none
+    | UserFieldChanged user ->
+        let newReview = { currentModel.Review with Who = user }
+        let nextModel = { currentModel with Review = newReview }
+        printfn "Changing model to %A" nextModel
+        nextModel, Cmd.none
+    | CommentFieldChanged comment ->
+        let newReview = { currentModel.Review with Comment = comment }
+        let nextModel = { currentModel with Review = newReview }
+        printfn "Changing model to %A" nextModel
+        nextModel, Cmd.none
     | SubmitReview review ->
         let nextModel = { currentModel with Review = review }
         printfn "New review is %A" nextModel
