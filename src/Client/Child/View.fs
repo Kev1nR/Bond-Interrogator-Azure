@@ -21,15 +21,13 @@ let view (model : Child.Types.Model) (dispatch : Child.Types.Msg -> unit) =
                 [
                     div []
                         [
-                            // Container.container []
-                            //     [
-                            //          Span.span [ OnMouseOver (fun _ -> printfn "mouse over") ] []
-                            //     ]
-
                             p [] [
-                                    // OnMouseOver (fun ev -> dispatch (UserFieldChanged "x")) ] [ str "click" ]
                                     for i in 1..5 do
-                                        yield a [ OnClick (fun _ -> printfn "sd" )]
+                                        yield span 
+                                            [ 
+                                                Style [ Cursor "pointer"]
+                                                OnMouseOver (fun _ -> printfn "OnMouseOver message for %d" i)
+                                                OnClick (fun _ -> printfn "OnClick message for %d" i)]
                                             [
                                                 Icon.icon [ Icon.Option.Modifiers [ Modifier.TextColor IsWarning ] ]
                                                     [ Fa.i [ (if i <= 3 then Fa.Solid.Star else Fa.Regular.Star) ] [ ] ]
@@ -47,11 +45,7 @@ let view (model : Child.Types.Model) (dispatch : Child.Types.Msg -> unit) =
                                 [
                                     Textarea.Placeholder "Review text"
                                     Textarea.OnChange (fun ev -> dispatch (CommentFieldChanged ev.Value))
-                                ]
-                                []
-                            Button.button [ Button.OnClick (fun _ -> dispatch (HoverRating 3)) ] [ str "Dispatch HoverRating" ]
-                            Button.button [ Button.OnClick (fun _ -> dispatch (SelectedRating 5)) ] [ str "Dispatch SelectedRating with 5" ]
-
+                                ][]
                         ] ]
               Modal.Card.foot [ ]
                 [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch (SubmitReview model.Review))  ]
