@@ -21,6 +21,22 @@ let view (model : Child.Types.Model) (dispatch : Child.Types.Msg -> unit) =
                 [
                     div []
                         [
+                            // Container.container []
+                            //     [
+                            //          Span.span [ OnMouseOver (fun _ -> printfn "mouse over") ] []
+                            //     ]
+
+                            p [] [
+                                    // OnMouseOver (fun ev -> dispatch (UserFieldChanged "x")) ] [ str "click" ]
+                                    for i in 1..5 do
+                                        yield a [ OnClick (fun _ -> printfn "sd" )]
+                                            [
+                                                Icon.icon [ Icon.Option.Modifiers [ Modifier.TextColor IsWarning ] ]
+                                                    [ Fa.i [ (if i <= 3 then Fa.Solid.Star else Fa.Regular.Star) ] [ ] ]
+                                            ]
+
+                                    yield str (sprintf " from %d reviews" 10)
+                                 ]
                             Input.input
                                 [
                                     Input.Placeholder "Reviewers name"
