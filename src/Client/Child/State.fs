@@ -1,5 +1,6 @@
 module Child.State
 
+open Rating
 open Child.Types
 open Shared
 open Elmish
@@ -17,6 +18,7 @@ let init film =
                     PostedDate = System.DateTime.Now
                 }
             RatingModel = { MaxRating = 5; HoverRating = 0; SelectedRating = 0; IsReadOnly = false }
+            Rating = Rating.init()
         }
 
     initialModel
@@ -34,6 +36,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let nextModel = { currentModel with Review = newReview; RatingModel = newRating }
         printfn "Changing model to %A" nextModel
         nextModel, Cmd.none
+    | RatingMsg msg ->
+        printfn "Got a RatingMsg of %A " msg
+        currentModel, Cmd.none
     | UserFieldChanged user ->
         let newReview = { currentModel.Review with Who = user }
         let nextModel = { currentModel with Review = newReview }

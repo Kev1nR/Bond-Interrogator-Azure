@@ -22,6 +22,8 @@ let view (model : Child.Types.Model) (dispatch : Child.Types.Msg -> unit) =
                     div []
                         [
                             p [] [
+                                    yield Rating.view true 6 model.Rating (fun msg -> dispatch (RatingMsg (msg)))
+
                                     for i in 1..(model.RatingModel.MaxRating) do
                                         yield span 
                                             [ 
