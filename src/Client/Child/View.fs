@@ -22,15 +22,18 @@ let view (model : Child.Types.Model) (dispatch : Child.Types.Msg -> unit) =
                     div []
                         [
                             p [] [
-                                    for i in 1..5 do
+                                    for i in 1..(model.RatingModel.MaxRating) do
                                         yield span 
                                             [ 
                                                 Style [ Cursor "pointer"]
-                                                OnMouseOver (fun _ -> printfn "OnMouseOver message for %d" i)
-                                                OnClick (fun _ -> printfn "OnClick message for %d" i)]
+                                                OnMouseOver (fun _ -> dispatch (HoverRating i))
+                                                OnClick (fun _ -> dispatch (SelectedRating i))
+                                            ]
                                             [
                                                 Icon.icon [ Icon.Option.Modifiers [ Modifier.TextColor IsWarning ] ]
-                                                    [ Fa.i [ (if i <= 3 then Fa.Solid.Star else Fa.Regular.Star) ] [ ] ]
+                                                    [ Fa.i [ (if i <= System.Math.Max (model.RatingModel.SelectedRating, model.RatingModel.HoverRating) 
+                                                              then Fa.Solid.Star 
+                                                              else Fa.Regular.Star) ] [ ] ]
                                             ]
 
                                     yield str (sprintf " from %d reviews" 10)
