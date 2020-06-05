@@ -1,7 +1,7 @@
-module Child.State
+module Review.State
 
 open Rating
-open Child.Types
+open Review.Types
 open Shared
 open Elmish
 
@@ -13,8 +13,8 @@ let init film =
                 {
                     SequenceId = film.SequenceId
                     Rating = 0
-                    Who = "Kevin"
-                    Comment = "Great film"
+                    Who = ""
+                    Comment = ""
                     PostedDate = System.DateTime.Now
                 }
             RatingModel = { MaxRating = 5; HoverRating = 0; SelectedRating = 0; IsReadOnly = false }
@@ -25,20 +25,10 @@ let init film =
 
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
-    | HoverRating rate ->
-        let newRating = { currentModel.RatingModel with HoverRating = rate }
-        let nextModel = { currentModel with RatingModel = newRating }
-        printfn "No change just notifying that %s hovering over %d" currentModel.FilmName rate
-        nextModel, Cmd.none
-    | SelectedRating rate ->
-        let newRating = { currentModel.RatingModel with SelectedRating = rate }
-        let newReview = { currentModel.Review with Rating = rate }
-        let nextModel = { currentModel with Review = newReview; RatingModel = newRating }
-        printfn "Changing model to %A" nextModel
-        nextModel, Cmd.none
     | RatingMsg msg ->
         printfn "Got a RatingMsg of %A " msg
-        currentModel, Cmd.none
+        let newRating, _ = Rating.update msg currentModel.Rating
+        { currentModel with Rating = newRating }, Cmd.none
     | UserFieldChanged user ->
         let newReview = { currentModel.Review with Who = user }
         let nextModel = { currentModel with Review = newReview }

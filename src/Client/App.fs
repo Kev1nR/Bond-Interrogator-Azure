@@ -24,7 +24,7 @@ type Model =
       CurrentFilm : int option
       IsBurgerOpen : bool
       ShowAddReview : bool
-      ChildModel : Child.Types.Model option
+      ChildModel : Review.Types.Model option
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -34,7 +34,7 @@ type Msg =
 | BondFilmSelected of BondFilm
 | ToggleBurger
 | AddReview of BondFilm
-| ReviewMsgHandler of Child.Types.Msg * Child.Types.Model
+| ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
@@ -76,31 +76,27 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, AddReview f ->
-        let nextModel = { currentModel with ShowAddReview = true; ChildModel = Some (Child.State.init f) }
+        let nextModel = { currentModel with ShowAddReview = true; ChildModel = Some (Review.State.init f) }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
-            | Child.Types.HoverRating r ->
-                printf "Got a HoverRating message with value %d" r
-                let nextChildModel, _ = Child.State.update childMsg childModel
+            | Review.Types.RatingMsg msg ->
+                printf "Got a RatingMsg message with value %A" msg
+                let nextChildModel, _ = Review.State.update childMsg childModel
                 { currentModel with ChildModel = Some nextChildModel }, Cmd.none
-            | Child.Types.SelectedRating r ->
-                printf "Got a SelectedRating message with value %d" r
-                let nextChildModel, _ = Child.State.update childMsg childModel
-                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
-            | Child.Types.UserFieldChanged user ->
+            | Review.Types.UserFieldChanged user ->
                 printf "Got a USerChanged message with value %s" user
-                let nextChildModel, _ = Child.State.update childMsg childModel
+                let nextChildModel, _ = Review.State.update childMsg childModel
                 { currentModel with ChildModel = Some nextChildModel }, Cmd.none
-            | Child.Types.CommentFieldChanged comment ->
+            | Review.Types.CommentFieldChanged comment ->
                 printf "Got a CommentFieldChanged message with value %s" comment
-                let nextChildModel, _ = Child.State.update childMsg childModel
+                let nextChildModel, _ = Review.State.update childMsg childModel
                 { currentModel with ChildModel = Some nextChildModel }, Cmd.none
-            | Child.Types.SubmitReview r ->
+            | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
-                let nextChildModel, cmd = Child.State.update childMsg childModel
+                let nextChildModel, cmd = Review.State.update childMsg childModel
                 { currentModel with ChildModel = Some nextChildModel; ShowAddReview = false }, Cmd.none
-            | Child.Types.CancelReview ->
+            | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowAddReview = false }, Cmd.none
 
@@ -248,7 +244,7 @@ let filmInfo (model : Model)=
                 model.BondFilm
                 |> Option.fold (fun _ b ->
                     div [] [
-                        Client.Components.ratingComponent b.Reviews
+                        //Client.Components.ratingComponent b.Reviews
                         br []
                         p [] [ str b.Synopsis ] ])
                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
@@ -299,7 +295,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
           Container.container []
             [ if model.ShowAddReview
               then
-                yield Child.View.view model.ChildModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ChildModel.Value))) ]
+                yield Review.View.view model.ChildModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ChildModel.Value))) ]
 
           Container.container [ ]
             [ filmInfo model ]

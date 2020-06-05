@@ -1,4 +1,4 @@
-module Child.Types
+module Review.Types
 
 open Shared
 
@@ -12,8 +12,6 @@ type Model =
     }
 
 type Msg =
-    | HoverRating of int
-    | SelectedRating of int
     | RatingMsg of Rating.Msg
     | UserFieldChanged of string
     | CommentFieldChanged of string

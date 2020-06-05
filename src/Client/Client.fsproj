@@ -9,11 +9,10 @@
         <None Include="paket.references" />
         <Compile Include="..\Shared\Shared.fs" />
         <Compile Include=".\SharedComponents\Rating.fs" />
-        <Compile Include=".\Child\Types.fs" />
-        <Compile Include=".\Child\State.fs" />
-        <Compile Include=".\Child\View.fs" />
+        <Compile Include=".\Review\Types.fs" />
+        <Compile Include=".\Review\State.fs" />
+        <Compile Include=".\Review\View.fs" />
         <Compile Include="Version.fs" />
-        <Compile Include="components.fs" />
         <Compile Include="App.fs" />
         <Compile Include="Client.fs" />
     </ItemGroup>
