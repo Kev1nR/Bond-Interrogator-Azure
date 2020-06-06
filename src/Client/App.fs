@@ -23,8 +23,8 @@ type Model =
       BondFilmList : BondFilm list option
       CurrentFilm : int option
       IsBurgerOpen : bool
-      ShowAddReview : bool
-      ChildModel : Review.Types.Model option
+      ShowModal: bool
+      ReviewModel : Review.Types.Model option
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -33,6 +33,7 @@ type Msg =
 | BondFilmListLoaded of BondFilm list
 | BondFilmSelected of BondFilm
 | ToggleBurger
+| CloseModal
 | AddReview of BondFilm
 | ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
 
@@ -48,8 +49,8 @@ let init () : Model * Cmd<Msg> =
         BondFilmList = None;
         CurrentFilm = None;
         IsBurgerOpen = false;
-        ShowAddReview = false
-        ChildModel = None}
+        ShowModal = false
+        ReviewModel = None}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -70,27 +71,28 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           BondFilmList = Some films
                           CurrentFilm = None
                           IsBurgerOpen = false
-                          ShowAddReview = false
-                          ChildModel = None
+                          ShowModal = false
+                          ReviewModel = None
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
+    | _, CloseModal -> { currentModel with ShowModal = not currentModel.ShowModal }, Cmd.none
     | _, AddReview f ->
-        let nextModel = { currentModel with ShowAddReview = true; ChildModel = Some (Review.State.init f) }
+        let nextModel = { currentModel with ShowModal = true; ReviewModel = Some (Review.State.init f) }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, cmd = Review.State.update childMsg childModel
-                { currentModel with ChildModel = Some nextChildModel; ShowAddReview = false }, Cmd.none
+                { currentModel with ReviewModel = Some nextChildModel; ShowModal = false }, Cmd.none
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
-                { currentModel with ShowAddReview = false }, Cmd.none
+                { currentModel with ShowModal = false }, Cmd.none
             | _ ->
                 printf "Got another ReviewMsg %A" childMsg
                 let nextChildModel, _ = Review.State.update childMsg childModel
-                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
+                { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
 
 let safeComponents =
     let components =
@@ -176,6 +178,31 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                           Dropdown.Item.Props [ OnClick ( fun _ -> dispatch (BondFilmSelected m)) ]
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
+
+let modalViewer (model: Model) (dispatch : Msg -> unit) =
+    let isActive, filmName =
+        model.BondFilm |> Option.fold (fun bfCs bf -> model.ShowModal, bf.Title) (false, "")
+
+    Modal.modal [ Modal.IsActive isActive ]
+        [ Modal.background [ Props [ OnClick (fun _ -> dispatch CloseModal) ] ] [ ]
+          Modal.Card.card [ ]
+            [ Modal.Card.head [ ]
+                [ Modal.Card.title [ ]
+                    [ str filmName ]
+                  Delete.delete [ Delete.OnClick (fun _ -> dispatch CloseModal) ] [ ] ]
+              Modal.Card.body [ ]
+                [
+                    div [] [ str "modal content" ]
+                ]
+
+              Modal.Card.foot [ ]
+                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch (SubmitReview model.Review))  ]
+                    [ str "Save changes" ]
+                  Button.button [ ]
+                    [ str "Cancel" ] ] ] ]
+            ]
+        ]
+
 
 let characterCard filmId character =
   let imgURI = character.ImageURI |> Option.defaultValue ""
