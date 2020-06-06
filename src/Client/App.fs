@@ -80,18 +80,6 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
-            | Review.Types.RatingMsg msg ->
-                printf "Got a RatingMsg message with value %A" msg
-                let nextChildModel, _ = Review.State.update childMsg childModel
-                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
-            | Review.Types.UserFieldChanged user ->
-                printf "Got a USerChanged message with value %s" user
-                let nextChildModel, _ = Review.State.update childMsg childModel
-                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
-            | Review.Types.CommentFieldChanged comment ->
-                printf "Got a CommentFieldChanged message with value %s" comment
-                let nextChildModel, _ = Review.State.update childMsg childModel
-                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, cmd = Review.State.update childMsg childModel
@@ -99,6 +87,10 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowAddReview = false }, Cmd.none
+            | _ ->
+                printf "Got another ReviewMsg %A" childMsg
+                let nextChildModel, _ = Review.State.update childMsg childModel
+                { currentModel with ChildModel = Some nextChildModel }, Cmd.none
 
 let safeComponents =
     let components =
