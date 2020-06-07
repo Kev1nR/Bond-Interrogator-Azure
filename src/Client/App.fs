@@ -196,12 +196,10 @@ let modalViewer (model: Model) (dispatch : Msg -> unit) =
                 ]
 
               Modal.Card.foot [ ]
-                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch (SubmitReview model.Review))  ]
+                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch CloseModal)  ]
                     [ str "Save changes" ]
                   Button.button [ ]
                     [ str "Cancel" ] ] ] ]
-            ]
-        ]
 
 
 let characterCard filmId character =
@@ -312,9 +310,9 @@ let view (model : Model) (dispatch : Msg -> unit) =
             ]
 
           Container.container []
-            [ if model.ShowAddReview
+            [ if model.
               then
-                yield Review.View.view model.ChildModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ChildModel.Value))) ]
+                yield Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value))) ]
 
           Container.container [ ]
             [ filmInfo model ]
