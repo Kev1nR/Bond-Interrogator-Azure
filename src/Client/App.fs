@@ -11,6 +11,7 @@ open Shared
 open Fable.Core.JS
 
 type ServerState = Idle | Loading | ServerError of string
+type ModalContent = Review | Character
 
 // The model holds data that you want to keep track of while the application is running
 // in this case, we are keeping track of selection of Bond films from the dropdown selector
@@ -23,7 +24,7 @@ type Model =
       BondFilmList : BondFilm list option
       CurrentFilm : int option
       IsBurgerOpen : bool
-      ShowModal: bool
+      ShowModal: ModalContent option
       ReviewModel : Review.Types.Model option
     }
 
@@ -49,7 +50,7 @@ let init () : Model * Cmd<Msg> =
         BondFilmList = None;
         CurrentFilm = None;
         IsBurgerOpen = false;
-        ShowModal = false
+        ShowModal = None
         ReviewModel = None}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
@@ -71,24 +72,24 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           BondFilmList = Some films
                           CurrentFilm = None
                           IsBurgerOpen = false
-                          ShowModal = false
+                          ShowModal = None
                           ReviewModel = None
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
-    | _, CloseModal -> { currentModel with ShowModal = not currentModel.ShowModal }, Cmd.none
+    | _, CloseModal -> { currentModel with ShowModal = None }, Cmd.none
     | _, AddReview f ->
-        let nextModel = { currentModel with ShowModal = true; ReviewModel = Some (Review.State.init f) }
+        let nextModel = { currentModel with ShowModal = Some Review; ReviewModel = Some (Review.State.init f) }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, cmd = Review.State.update childMsg childModel
-                { currentModel with ReviewModel = Some nextChildModel; ShowModal = false }, Cmd.none
+                { currentModel with ReviewModel = Some nextChildModel; ShowModal = None }, Cmd.none
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
-                { currentModel with ShowModal = false }, Cmd.none
+                { currentModel with ShowModal = None }, Cmd.none
             | _ ->
                 printf "Got another ReviewMsg %A" childMsg
                 let nextChildModel, _ = Review.State.update childMsg childModel
@@ -179,9 +180,14 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
 
-let modalViewer (model: Model) (dispatch : Msg -> unit) =
+let modalViewer
+    content
+    saveDispatch
+    (model: Model)
+    (dispatch : Msg -> unit) =
+
     let isActive, filmName =
-        model.BondFilm |> Option.fold (fun bfCs bf -> model.ShowModal, bf.Title) (false, "")
+        model.BondFilm |> Option.fold (fun bfCs bf -> model.ShowModal.IsSome, bf.Title) (false, "")
 
     Modal.modal [ Modal.IsActive isActive ]
         [ Modal.background [ Props [ OnClick (fun _ -> dispatch CloseModal) ] ] [ ]
@@ -192,11 +198,11 @@ let modalViewer (model: Model) (dispatch : Msg -> unit) =
                   Delete.delete [ Delete.OnClick (fun _ -> dispatch CloseModal) ] [ ] ]
               Modal.Card.body [ ]
                 [
-                    div [] [ str "modal content" ]
+                    content
                 ]
 
               Modal.Card.foot [ ]
-                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch CloseModal)  ]
+                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch saveDispatch)  ]
                     [ str "Save changes" ]
                   Button.button [ ]
                     [ str "Cancel" ] ] ] ]
@@ -310,9 +316,18 @@ let view (model : Model) (dispatch : Msg -> unit) =
             ]
 
           Container.container []
-            [ if model.
-              then
-                yield Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value))) ]
+            [
+              match model.ShowModal with
+              | Some Review ->
+                  printfn "Show modal for review"
+                  let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
+                  yield modalViewer reviewContent (CloseModal) model dispatch
+              | Some Character ->
+                  printfn "Show modal for character"
+                  yield modalViewer (str "This will be character content") CloseModal model dispatch
+              | None ->
+                  printfn "Don't show modal"
+            ]
 
           Container.container [ ]
             [ filmInfo model ]
