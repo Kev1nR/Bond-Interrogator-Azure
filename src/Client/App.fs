@@ -86,6 +86,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, cmd = Review.State.update childMsg childModel
+                printfn "Review model after submit %A" nextChildModel
                 { currentModel with ReviewModel = Some nextChildModel; ShowModal = None }, Cmd.none
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
@@ -179,34 +180,6 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                           Dropdown.Item.Props [ OnClick ( fun _ -> dispatch (BondFilmSelected m)) ]
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
-
-let modalViewer
-    content
-    saveDispatch
-    (model: Model)
-    (dispatch : Msg -> unit) =
-
-    let isActive, filmName =
-        model.BondFilm |> Option.fold (fun bfCs bf -> model.ShowModal.IsSome, bf.Title) (false, "")
-
-    Modal.modal [ Modal.IsActive isActive ]
-        [ Modal.background [ Props [ OnClick (fun _ -> dispatch CloseModal) ] ] [ ]
-          Modal.Card.card [ ]
-            [ Modal.Card.head [ ]
-                [ Modal.Card.title [ ]
-                    [ str filmName ]
-                  Delete.delete [ Delete.OnClick (fun _ -> dispatch CloseModal) ] [ ] ]
-              Modal.Card.body [ ]
-                [
-                    content
-                ]
-
-              Modal.Card.foot [ ]
-                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch saveDispatch)  ]
-                    [ str "Save changes" ]
-                  Button.button [ ]
-                    [ str "Cancel" ] ] ] ]
-
 
 let characterCard filmId character =
   let imgURI = character.ImageURI |> Option.defaultValue ""
@@ -321,10 +294,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
               | Some Review ->
                   printfn "Show modal for review"
                   let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
-                  yield modalViewer reviewContent (CloseModal) model dispatch
+                  yield reviewContent
               | Some Character ->
                   printfn "Show modal for character"
-                  yield modalViewer (str "This will be character content") CloseModal model dispatch
+                  yield (str "This will be character content")
               | None ->
                   printfn "Don't show modal"
             ]
