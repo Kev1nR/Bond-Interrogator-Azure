@@ -8,6 +8,7 @@
         <None Include="index.html" />
         <None Include="paket.references" />
         <Compile Include="..\Shared\Shared.fs" />
+        <Compile Include=".\SharedComponents\ModalView.fs" />
         <Compile Include=".\SharedComponents\Rating.fs" />
         <Compile Include=".\Review\Types.fs" />
         <Compile Include=".\Review\State.fs" />

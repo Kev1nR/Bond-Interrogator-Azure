@@ -293,8 +293,11 @@ let view (model : Model) (dispatch : Msg -> unit) =
               match model.ShowModal with
               | Some Review ->
                   printfn "Show modal for review"
-                  let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
-                  yield reviewContent
+                  SharedViews.modalView true "Film title" (str "Review content") 
+                                        (Button.button [] [ str "Save button" ])
+                                        ()
+                  // let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
+                  // yield reviewContent
               | Some Character ->
                   printfn "Show modal for character"
                   yield (str "This will be character content")
