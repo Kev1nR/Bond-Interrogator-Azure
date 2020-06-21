@@ -26,13 +26,13 @@ var CONFIG = {
     devServerProxy: {
         // redirect requests that start with /api/* to the server on port 8085
         '/api/*': {
-            target: 'https://localhost:' + (process.env.SERVER_PROXY_PORT || "8085"),
+            target: 'https://localhost:' + (process.env.SERVER_PROXY_PORT || "8086"),
                 secure: false,
                 changeOrigin: true
            },
         // redirect websocket requests that start with /socket/* to the server on the port 8085
         '/socket/*': {
-            target: 'https://localhost:' + (process.env.SERVER_PROXY_PORT || "8085"),
+            target: 'https://localhost:' + (process.env.SERVER_PROXY_PORT || "8086"),
                 secure: false,
                 ws: true
            }
@@ -92,7 +92,7 @@ module.exports = {
     // Besides the HtmlPlugin, we use the following plugins:
     // PRODUCTION
     //      - MiniCssExtractPlugin: Extracts CSS from bundle to a different file
-    //          To minify CSS, see https://github.com/webpack-contrib/mini-css-extract-plugin#minimizing-for-production    
+    //          To minify CSS, see https://github.com/webpack-contrib/mini-css-extract-plugin#minimizing-for-production
     //      - CopyWebpackPlugin: Copies static assets to output directory
     // DEVELOPMENT
     //      - HotModuleReplacementPlugin: Enables hot reloading when code changes without refreshing

@@ -41,7 +41,7 @@ let getGirls bondFilmSequenceId =
 
 let port =
     "SERVER_PORT"
-    |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
+    |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8086us
 
 let webApp = router {
     get "/api/films" (fun next ctx ->
