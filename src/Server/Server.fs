@@ -21,15 +21,7 @@ let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopm
 // Create the table client.
 let tableClient = storageAccount.CreateCloudTableClient()
 
-type ReviewEntity(review : Review) =
-    inherit TableEntity(partitionKey = review.SequenceId.ToString(), rowKey = review.Who)
-    new() = ReviewEntity()
-    member val Rating = review.Rating with get, set
-    member val Comment = review.Comment with get, set
-    member val PostedDate = review.PostedDate with get, set
-
 let bondFilmTable = tableClient.GetTableReference("BondFilm")
-let reviewTable = tableClient.GetTableReference("Review")
 
 let getBondfilms =
     TableQuery().Where(
@@ -48,16 +40,10 @@ let getGirls bondFilmSequenceId =
                    TableQuery().Where(sprintf "PartitionKey eq '%d'" bondFilmSequenceId))
     |> Seq.map (fun e -> { Name = e.Properties.["Character"].StringValue; Actor = e.Properties.["Actor"].StringValue; ImageURI = None })
 
-let getReviews bondFilmSequenceId =
-    tableClient.GetTableReference("Review")
-               .ExecuteQuery(
-                   TableQuery().Where(sprintf "PartitionKey eq '%d'" bondFilmSequenceId))
-    |> Seq.map (fun e -> { SequenceId = bondFilmSequenceId; Rating = e.Properties.["Rating"].Int32Value.Value; Who = e.RowKey;
-                           Comment = e.Properties.["Comment"].StringValue; PostedDate = e.Properties.["PostedDate"].DateTime.Value})
 
 let getImgURI filmId character = AzureServices.getBondMediaCharacterURI (string filmId) character
 
-let getBondFilm (filmId : int) bondGirlsFn bondFoesFn reviewsFn =
+let getBondFilm (filmId : int) bondGirlsFn bondFoesFn =
     let tq =
         TableQuery().Where(
             TableQuery.CombineFilters(
@@ -75,16 +61,14 @@ let getBondFilm (filmId : int) bondGirlsFn bondFoesFn reviewsFn =
     let q = if bondData.Properties.ContainsKey("Q") then Some (bondData.Properties.["Q"].StringValue) else None
     let theEnemy = bondFoesFn sequenceId |> Seq.toList
     let theGirls = bondGirlsFn sequenceId |> Seq.toList
-    let reviews = reviewsFn sequenceId |> Seq.toList
 
     {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
      M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
      Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-     TheEnemy = theEnemy; TheGirls = theGirls
-     Reviews = reviews}
+     TheEnemy = theEnemy; TheGirls = theGirls}
 
-let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn reviewsFn =
+let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn =
     bondDataFn
     |> Seq.map (fun f ->
                     let sequenceId = int f.RowKey
@@ -95,20 +79,14 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                     let q = if f.Properties.ContainsKey("Q") then Some (f.Properties.["Q"].StringValue) else None
                     let theEnemy = bondFoesFn sequenceId |> Seq.toList
                     let theGirls = bondGirlsFn sequenceId |> Seq.toList
-                    let reviews = reviewsFn sequenceId |> Seq.toList
 
                     {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
                      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
                      M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
                      Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-                     TheEnemy = theEnemy; TheGirls = theGirls
-                     Reviews = reviews})
+                     TheEnemy = theEnemy; TheGirls = theGirls})
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
-let postReview (review : Review) =
-        let reviewEntity = ReviewEntity(review)
-        let insertReview = TableOperation.InsertOrReplace(reviewEntity)
-        reviewTable.Execute(insertReview) |> ignore
 
 let port =
     "SERVER_PORT"
@@ -117,8 +95,7 @@ let port =
 let webApp = router {
     get "/api/films" (fun next ctx ->
         task {
-            let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies getReviews
-
+            let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies
             return! json movieList next ctx
         })
     getf "/api/list-media/%s" (fun filmId next ctx ->
@@ -129,24 +106,7 @@ let webApp = router {
         task {
             return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
         })
-    post "/api/add-review" (fun next ctx ->
-        task {
-            use strm = new StreamReader(ctx.Request.Body)
-            let! conts = strm.ReadToEndAsync()
-            printfn "Body is %A " conts
-            let review = Net.Decode.Auto.fromString<Review>(conts)
-            printfn "Decoded review -> %A" review
-
-            match review with
-            | Ok r ->
-                postReview r
-                let bf = getBondFilm (r.SequenceId) getGirls getEnemies getReviews
-                printfn "Retreived film -> %A" bf
-                return! json bf next ctx
-            | Error err ->
-                return! json (Error err) next ctx
-        })
-}
+    }
 
 let configureAzure (services:IServiceCollection) =
     tryGetEnv "APPINSIGHTS_INSTRUMENTATIONKEY"
