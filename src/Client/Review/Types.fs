@@ -7,7 +7,6 @@ type Model =
     {
         FilmName: string
         Review: Review
-        RatingModel: RatingModel
         Rating: Rating.Model
     }
 

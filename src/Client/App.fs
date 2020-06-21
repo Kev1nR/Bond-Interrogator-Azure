@@ -85,9 +85,10 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             match childMsg with
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
-                let nextChildModel, cmd = Review.State.update childMsg childModel
-                printfn "Review model after submit %A" nextChildModel
-                { currentModel with ReviewModel = Some nextChildModel; ShowModal = None }, Cmd.none
+                // We already have what we need here, just update the child state
+                Review.State.update childMsg childModel |> ignore
+                // Here we will post the review and update the ui
+                { currentModel with ShowModal = None }, Cmd.none
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowModal = None }, Cmd.none
@@ -225,7 +226,7 @@ let characters (model : Model) =
             yield cc
         ]
 
-let filmInfo (model : Model)=
+let filmInfo (model : Model) (dispatch : Msg -> unit) =
     Column.column
       [ Column.CustomClass "intro"
         Column.Width (Screen.All, Column.Is8)
@@ -233,6 +234,14 @@ let filmInfo (model : Model)=
       [ h2 [  ClassName "title" ]
           [
             yield (model.BondFilm |> Option.fold (fun _ b -> str b.Title) (str "\"Do you expect me to talk?\""))
+            yield Container.container []
+                    [
+                        match model.BondFilm with
+                        | Some bf ->
+                           yield  Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ]
+                        | None -> yield p [] []
+                    ]
+
           ]
         p [ ClassName "subtitle"]
           [
@@ -240,7 +249,6 @@ let filmInfo (model : Model)=
                 model.BondFilm
                 |> Option.fold (fun _ b ->
                     div [] [
-                        //Client.Components.ratingComponent b.Reviews
                         br []
                         p [] [ str b.Synopsis ] ])
                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
@@ -282,14 +290,6 @@ let view (model : Model) (dispatch : Msg -> unit) =
 
           Container.container []
             [
-                match model.BondFilm with
-                | Some bf ->
-                   yield  Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ]
-                | None -> yield p [] []
-            ]
-
-          Container.container []
-            [
               match model.ShowModal with
               | Some Review ->
                   printfn "Show modal for review"
@@ -303,7 +303,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
             ]
 
           Container.container [ ]
-            [ filmInfo model ]
+            [ filmInfo model dispatch ]
 
           footer [ ClassName "footer" ]
             [ footerContainer ] ]

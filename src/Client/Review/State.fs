@@ -17,7 +17,6 @@ let init film =
                     Comment = ""
                     PostedDate = System.DateTime.Now
                 }
-            RatingModel = { MaxRating = 5; HoverRating = 0; SelectedRating = 0; IsReadOnly = false }
             Rating = Rating.init()
         }
 
