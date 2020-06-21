@@ -2,6 +2,14 @@ namespace Shared
 
 type Character = { Name: string; Actor: string; ImageURI: string option }
 
+type Review = {
+    SequenceId: int
+    Rating: int
+    Who: string
+    Comment: string
+    PostedDate: System.DateTime
+}
+
 type BondFilm = {
     SequenceId: int
     Title: string
