@@ -12,8 +12,8 @@ type Model =
     }
 
 type Msg =
-    | RatingMsg of Rating.Msg
-    | UserFieldChanged of string
-    | CommentFieldChanged of string
+    // | RatingMsg of Rating.Msg
+    | UserFieldChanged of Review
+    | CommentFieldChanged of Review
     | SubmitReview of Review
     | CancelReview

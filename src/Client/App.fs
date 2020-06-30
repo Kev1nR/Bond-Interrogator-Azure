@@ -25,7 +25,7 @@ type Model =
       CurrentFilm : int option
       IsBurgerOpen : bool
       ShowModal: ModalContent option
-      ReviewModel : Review.Types.Model option
+      Review : Review option
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -36,7 +36,7 @@ type Msg =
 | ToggleBurger
 | CloseModal
 | AddReview of BondFilm
-| ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
+| ReviewMsgHandler of Review.Types.Msg * Review //.Types.Model
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
@@ -51,7 +51,7 @@ let init () : Model * Cmd<Msg> =
         CurrentFilm = None;
         IsBurgerOpen = false;
         ShowModal = None
-        ReviewModel = None}
+        Review = None}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -73,13 +73,21 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           CurrentFilm = None
                           IsBurgerOpen = false
                           ShowModal = None
-                          ReviewModel = None
+                          Review = None
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, CloseModal -> { currentModel with ShowModal = None }, Cmd.none
     | _, AddReview f ->
-        let nextModel = { currentModel with ShowModal = Some Review; ReviewModel = Some (Review.State.init f) }
+        let newReview = {
+                          SequenceId = 0
+                          Rating = 0
+                          Who = "kbr"
+                          Comment = ""
+                          PostedDate = System.DateTime.Now
+                      }
+
+        let nextModel = { currentModel with ShowModal = Some Review; Review = Some newReview }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
@@ -87,14 +95,20 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, cmd = Review.State.update childMsg childModel
                 printfn "Review model after submit %A" nextChildModel
-                { currentModel with ReviewModel = Some nextChildModel; ShowModal = None }, Cmd.none
+                { currentModel with ShowModal = None }, Cmd.none
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowModal = None }, Cmd.none
-            | _ ->
-                printf "Got another ReviewMsg %A" childMsg
-                let nextChildModel, _ = Review.State.update childMsg childModel
-                { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+            | Review.Types.UserFieldChanged r ->
+                printf "Got User ReviewMsg %A" childMsg
+                let nextChildModel, _ = Review.State.update childMsg r
+                // { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+                { currentModel with Review = Some nextChildModel }, Cmd.none
+            | Review.Types.CommentFieldChanged r ->
+                printf "Got Comment ReviewMsg %A" childMsg
+                let nextChildModel, _ = Review.State.update childMsg r
+                // { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+                { currentModel with Review = Some nextChildModel }, Cmd.none
 
 let safeComponents =
     let components =
@@ -293,7 +307,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
               match model.ShowModal with
               | Some Review ->
                   printfn "Show modal for review"
-                  let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
+                  let reviewContent = Review.View.view model.Review.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.Review.Value)))
                   yield reviewContent
               | Some Character ->
                   printfn "Show modal for character"
