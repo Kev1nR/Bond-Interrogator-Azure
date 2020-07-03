@@ -79,21 +79,14 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, CloseModal -> { currentModel with ShowModal = None }, Cmd.none
     | _, AddReview f ->
-        let newReview = {
-                          SequenceId = 0
-                          Rating = 0
-                          Who = "kbr"
-                          Comment = ""
-                          PostedDate = System.DateTime.Now
-                        }
-
+        let newReview, _ = Review.State.init f
         let nextModel = { currentModel with ShowModal = Some Review; Review = Some newReview }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
-                let nextChildModel, cmd = Review.State.update childMsg childModel
+                let nextChildModel, _ = Review.State.update childMsg childModel
                 printfn "Review model after submit %A" nextChildModel
                 { currentModel with ShowModal = None }, Cmd.none
             | Review.Types.CancelReview ->
