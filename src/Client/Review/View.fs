@@ -6,14 +6,14 @@ open Fulma
 open Review.Types
 open Shared
 
-let view (model : Review) (dispatch : Review.Types.Msg -> unit) =
+let view title (model : Review) (dispatch : Review.Types.Msg -> unit) =
 
     Modal.modal [ Modal.IsActive true ]
         [ Modal.background [ Props [ OnClick (fun _ -> dispatch CancelReview) ] ] [ ]
           Modal.Card.card [ ]
             [ Modal.Card.head [ ]
                 [ Modal.Card.title [ ]
-                    [ str "model.FilmName" ]
+                    [ str title ]
                   Delete.delete [ Delete.OnClick (fun _ -> dispatch CancelReview) ] [ ] ]
               Modal.Card.body [ ]
                 [
@@ -24,18 +24,18 @@ let view (model : Review) (dispatch : Review.Types.Msg -> unit) =
                             Input.input
                                 [
                                     Input.Placeholder "Reviewers name"
-                                    Input.OnChange (fun ev -> dispatch (UserFieldChanged ({ model with Who = ev.Value})))
+                                    Input.OnChange (fun ev -> dispatch (ContentChanged ({ model with Who = ev.Value})))
                                 ]
 
                             Textarea.textarea
                                 [
                                     Textarea.Placeholder "Review text"
-                                    Textarea.OnChange (fun ev -> dispatch (CommentFieldChanged ({ model with Comment = ev.Value})))
+                                    Textarea.OnChange (fun ev -> dispatch (ContentChanged ({ model with Comment = ev.Value})))
                                 ][]
                         ]
                 ]
               Modal.Card.foot [ ]
                 [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch (SubmitReview model))  ]
                     [ str "Save changes" ]
-                  Button.button [ ]
+                  Button.button [ Button.OnClick (fun _ -> dispatch (CancelReview))]
                     [ str "Cancel" ] ] ] ]
