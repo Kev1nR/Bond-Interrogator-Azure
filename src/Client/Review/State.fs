@@ -6,35 +6,29 @@ open Shared
 open Elmish
 
 let init film =
-    {
-        SequenceId = film.SequenceId
-        Rating = 0
-        Who = ""
-        Comment = ""
-        PostedDate = System.DateTime.Now
-    }, Cmd.none
+    let newReview = {
+                        SequenceId = film.SequenceId
+                        Rating = 0
+                        Who = ""
+                        Comment = ""
+                        PostedDate = System.DateTime.Now
+                    }
 
-    // let initialModel =
-    //     {
-    //         FilmName = film.Title
-    //         Review =
+    let newRating = Rating.init()
 
-    //         RatingModel = { MaxRating = 5; HoverRating = 0; SelectedRating = 0; IsReadOnly = false }
-    //         Rating = Rating.init()
-    //     }
+    { Review = newReview; RatingModel = newRating }, Cmd.none
 
-    // initialModel
-
-let update (msg : Msg) (currentModel : Review) : Review * Cmd<Msg> =
+let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
-    // | RatingMsg msg ->
-    //     printfn "Got a RatingMsg of %A " msg
-    //     let newRating, _ = Rating.update msg currentModel
-    //     { currentModel with Rating = newRating }, Cmd.none
+    | RatingMsg msg ->
+        printfn "Got a RatingMsg of %A " msg
+        let newRating, _ = Rating.update msg currentModel.RatingModel
+        let newReview = { currentModel.Review with Rating = newRating.SelectedRating }
+        { currentModel with Review = newReview; RatingModel = newRating }, Cmd.none
     | ContentChanged review ->
         printfn "Changing model to %A" review
-        review, Cmd.none
+        { currentModel with Review = review }, Cmd.none
     | SubmitReview review ->
         printfn "New review is %A" review
-        review, Cmd.none
+        { currentModel with Review = review }, Cmd.none
     | CancelReview -> currentModel, Cmd.none

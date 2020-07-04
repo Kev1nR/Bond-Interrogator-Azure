@@ -25,7 +25,7 @@ type Model =
       CurrentFilm : int option
       IsBurgerOpen : bool
       ShowModal: ModalContent option
-      Review : Review option
+      ReviewModel : Review.Types.Model option
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -36,7 +36,7 @@ type Msg =
 | ToggleBurger
 | CloseModal
 | AddReview of BondFilm
-| ReviewMsgHandler of Review.Types.Msg * Review //.Types.Model
+| ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
@@ -51,7 +51,7 @@ let init () : Model * Cmd<Msg> =
         CurrentFilm = None;
         IsBurgerOpen = false;
         ShowModal = None
-        Review = None}
+        ReviewModel = None}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -73,14 +73,14 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           CurrentFilm = None
                           IsBurgerOpen = false
                           ShowModal = None
-                          Review = None
+                          ReviewModel = None
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, CloseModal -> { currentModel with ShowModal = None }, Cmd.none
     | _, AddReview f ->
         let newReview, _ = Review.State.init f
-        let nextModel = { currentModel with ShowModal = Some Review; Review = Some newReview }
+        let nextModel = { currentModel with ShowModal = Some Review; ReviewModel = Some newReview }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
@@ -92,11 +92,23 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowModal = None }, Cmd.none
+            | Review.Types.RatingMsg rMsg ->
+                match rMsg with
+                | Rating.Msg.HoverRating n ->
+                    printf "Got HoverRating changed %A" n
+                    let newRating = { childModel.RatingModel with HoverRating = n }
+                    let nextChildModel, _ = Review.State.update childMsg { childModel with RatingModel = newRating }
+                    { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+                | Rating.Msg.SelectedRating n ->
+                    printf "Got SelectedRating changed %A" n
+                    let newRating = { childModel.RatingModel with SelectedRating = n }
+                    let nextChildModel, _ = Review.State.update childMsg { childModel with RatingModel = newRating }
+                    { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
             | Review.Types.ContentChanged r ->
                 printf "Got Content changed ReviewMsg %A" childMsg
-                let nextChildModel, _ = Review.State.update childMsg r
+                let nextChildModel, _ = Review.State.update childMsg { childModel with Review = r }
                 // { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
-                { currentModel with Review = Some nextChildModel }, Cmd.none
+                { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
 
 let safeComponents =
     let components =
@@ -295,7 +307,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
               | Some Review ->
                     printfn "Show modal for review"
                     let reviewContent =
-                        match model.BondFilm, model.Review with
+                        match model.BondFilm, model.ReviewModel with
                         | Some bf, Some r ->
                             let title = bf.Title
                             Review.View.view title r (fun msg -> dispatch (ReviewMsgHandler (msg, r)))

@@ -6,7 +6,7 @@ open Fulma
 open Review.Types
 open Shared
 
-let view title (model : Review) (dispatch : Review.Types.Msg -> unit) =
+let view title (model : Model) (dispatch : Review.Types.Msg -> unit) =
 
     Modal.modal [ Modal.IsActive true ]
         [ Modal.background [ Props [ OnClick (fun _ -> dispatch CancelReview) ] ] [ ]
@@ -19,23 +19,23 @@ let view title (model : Review) (dispatch : Review.Types.Msg -> unit) =
                 [
                     div []
                         [
-                            // Rating.view true 5 model.Rating (fun msg -> dispatch (RatingMsg (msg)))
+                            Rating.fiveStarRater model.RatingModel (fun msg -> dispatch (RatingMsg (msg)))
 
                             Input.input
                                 [
                                     Input.Placeholder "Reviewers name"
-                                    Input.OnChange (fun ev -> dispatch (ContentChanged ({ model with Who = ev.Value})))
+                                    Input.OnChange (fun ev -> dispatch (ContentChanged ({ model.Review with Who = ev.Value})))
                                 ]
 
                             Textarea.textarea
                                 [
                                     Textarea.Placeholder "Review text"
-                                    Textarea.OnChange (fun ev -> dispatch (ContentChanged ({ model with Comment = ev.Value})))
+                                    Textarea.OnChange (fun ev -> dispatch (ContentChanged ({ model.Review with Comment = ev.Value})))
                                 ][]
                         ]
                 ]
               Modal.Card.foot [ ]
-                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch (SubmitReview model))  ]
+                [ Button.button [ Button.Color IsSuccess; Button.OnClick (fun _ -> dispatch (SubmitReview model.Review))  ]
                     [ str "Save changes" ]
                   Button.button [ Button.OnClick (fun _ -> dispatch (CancelReview))]
                     [ str "Cancel" ] ] ] ]
