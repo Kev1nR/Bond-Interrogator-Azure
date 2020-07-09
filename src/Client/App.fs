@@ -223,11 +223,14 @@ let characterCard filmId character =
                 ] ] ] ]
 
 let characters (model : Model) =
-    let characterList = model.BondFilm |> Option.fold (fun _ bf -> [ bf.Bond; bf.M; bf.Q ]) ([])
+
+    let filmId, characterList =
+        model.BondFilm
+        |> Option.fold (fun _ bf -> bf.SequenceId, [ bf.Bond; bf.M; bf.Q ]) (0, [])
 
     let ccs = characterList
               |> Seq.choose id
-              |> Seq.map (characterCard)
+              |> Seq.map (characterCard filmId)
 
     if ccs |> Seq.isEmpty
     then
