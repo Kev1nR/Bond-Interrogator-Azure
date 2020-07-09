@@ -79,22 +79,35 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
     | _, CloseModal -> { currentModel with ShowModal = None }, Cmd.none
     | _, AddReview f ->
-        let nextModel = { currentModel with ShowModal = Some Review; ReviewModel = Some (Review.State.init f) }
+        let newReview, _ = Review.State.init f
+        let nextModel = { currentModel with ShowModal = Some Review; ReviewModel = Some newReview }
         nextModel, Cmd.none
     | _, ReviewMsgHandler (childMsg, childModel) ->
             match childMsg with
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
-                // We already have what we need here, just update the child state
-                Review.State.update childMsg childModel |> ignore
-                // Here we will post the review and update the ui
+                let nextChildModel, _ = Review.State.update childMsg childModel
+                printfn "Review model after submit %A" nextChildModel
                 { currentModel with ShowModal = None }, Cmd.none
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowModal = None }, Cmd.none
-            | _ ->
-                printf "Got another ReviewMsg %A" childMsg
-                let nextChildModel, _ = Review.State.update childMsg childModel
+            | Review.Types.RatingMsg rMsg ->
+                match rMsg with
+                | Rating.Msg.HoverRating n ->
+                    printf "Got HoverRating changed %A" n
+                    let newRating = { childModel.RatingModel with HoverRating = n }
+                    let nextChildModel, _ = Review.State.update childMsg { childModel with RatingModel = newRating }
+                    { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+                | Rating.Msg.SelectedRating n ->
+                    printf "Got SelectedRating changed %A" n
+                    let newRating = { childModel.RatingModel with SelectedRating = n }
+                    let nextChildModel, _ = Review.State.update childMsg { childModel with RatingModel = newRating }
+                    { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+            | Review.Types.ContentChanged r ->
+                printf "Got Content changed ReviewMsg %A" childMsg
+                let nextChildModel, _ = Review.State.update childMsg { childModel with Review = r }
+                // { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
                 { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
 
 let safeComponents =
@@ -182,8 +195,7 @@ let dropDownList (model : Model) (dispatch : Msg -> unit) =
                                       ] [str m.Title ]
                               | _ -> yield Dropdown.Item.a [ ] [str "<Empty>" ] ] ] ] ] ] ]
 
-
-let characterCard character =
+let characterCard filmId character =
   let imgURI = character.ImageURI |> Option.defaultValue ""
   let heading = character.Name
   let body = sprintf "Played by %s.%s is ..." character.Actor character.Name
@@ -227,7 +239,7 @@ let characters (model : Model) =
             yield cc
         ]
 
-let filmInfo (model : Model) (dispatch : Msg -> unit) =
+let filmInfo (model : Model) dispatch =
     Column.column
       [ Column.CustomClass "intro"
         Column.Width (Screen.All, Column.Is8)
@@ -242,7 +254,6 @@ let filmInfo (model : Model) (dispatch : Msg -> unit) =
                            yield  Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ]
                         | None -> yield p [] []
                     ]
-
           ]
         p [ ClassName "subtitle"]
           [
@@ -250,6 +261,7 @@ let filmInfo (model : Model) (dispatch : Msg -> unit) =
                 model.BondFilm
                 |> Option.fold (fun _ b ->
                     div [] [
+                        //Client.Components.ratingComponent b.Reviews
                         br []
                         p [] [ str b.Synopsis ] ])
                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])
@@ -293,9 +305,15 @@ let view (model : Model) (dispatch : Msg -> unit) =
             [
               match model.ShowModal with
               | Some Review ->
-                  printfn "Show modal for review"
-                  let reviewContent = Review.View.view model.ReviewModel.Value (fun msg -> dispatch (ReviewMsgHandler (msg, model.ReviewModel.Value)))
-                  yield reviewContent
+                    printfn "Show modal for review"
+                    let reviewContent =
+                        match model.BondFilm, model.ReviewModel with
+                        | Some bf, Some r ->
+                            let title = bf.Title
+                            Review.View.view title r (fun msg -> dispatch (ReviewMsgHandler (msg, r)))
+                        | _ -> (div [][])
+
+                    yield reviewContent
               | Some Character ->
                   printfn "Show modal for character"
                   yield (str "This will be character content")

@@ -21,8 +21,17 @@ let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopm
 // Create the table client.
 let tableClient = storageAccount.CreateCloudTableClient()
 
-let bondFilmTable = tableClient.GetTableReference("BondFilm")
+type ReviewEntity(review : Review) =
+    inherit TableEntity(partitionKey = review.SequenceId.ToString(), rowKey = review.Who)
+    new() = ReviewEntity()
+    member val Rating = review.Rating with get, set
+    member val Comment = review.Comment with get, set
+    member val PostedDate = review.PostedDate with get, set
 
+let bondFilmTable = tableClient.GetTableReference("BondFilm")
+let reviewTable = tableClient.GetTableReference("Review")
+
+>>>>>>> Scene3-Take1
 let getBondfilms =
     TableQuery().Where(
         TableQuery.GenerateFilterCondition(
@@ -79,14 +88,29 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                     let q = if f.Properties.ContainsKey("Q") then Some (f.Properties.["Q"].StringValue) else None
                     let theEnemy = bondFoesFn sequenceId |> Seq.toList
                     let theGirls = bondGirlsFn sequenceId |> Seq.toList
+<<<<<<< HEAD
+=======
+                    let reviews = reviewsFn sequenceId |> Seq.toList
+>>>>>>> Scene3-Take1
 
                     {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
                      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
                      M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
                      Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
+<<<<<<< HEAD
                      TheEnemy = theEnemy; TheGirls = theGirls})
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
+=======
+                     TheEnemy = theEnemy; TheGirls = theGirls
+                     Reviews = reviews})
+            |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
+
+let postReview (review : Review) =
+        let reviewEntity = ReviewEntity(review)
+        let insertReview = TableOperation.InsertOrReplace(reviewEntity)
+        reviewTable.Execute(insertReview) |> ignore
+>>>>>>> Scene3-Take1
 
 let port =
     "SERVER_PORT"
@@ -95,7 +119,12 @@ let port =
 let webApp = router {
     get "/api/films" (fun next ctx ->
         task {
+<<<<<<< HEAD
             let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies
+=======
+            let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies getReviews
+
+>>>>>>> Scene3-Take1
             return! json movieList next ctx
         })
     getf "/api/list-media/%s" (fun filmId next ctx ->

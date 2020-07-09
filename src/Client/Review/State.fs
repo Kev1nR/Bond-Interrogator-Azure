@@ -6,40 +6,29 @@ open Shared
 open Elmish
 
 let init film =
-    let initialModel =
-        {
-            FilmName = film.Title
-            Review =
-                {
-                    SequenceId = film.SequenceId
-                    Rating = 0
-                    Who = ""
-                    Comment = ""
-                    PostedDate = System.DateTime.Now
-                }
-            Rating = Rating.init()
-        }
+    let newReview = {
+                        SequenceId = film.SequenceId
+                        Rating = 0
+                        Who = ""
+                        Comment = ""
+                        PostedDate = System.DateTime.Now
+                    }
 
-    initialModel
+    let newRating = Rating.init()
+
+    { Review = newReview; RatingModel = newRating }, Cmd.none
 
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
     | RatingMsg msg ->
         printfn "Got a RatingMsg of %A " msg
-        let newRating, _ = Rating.update msg currentModel.Rating
-        { currentModel with Rating = newRating }, Cmd.none
-    | UserFieldChanged user ->
-        let newReview = { currentModel.Review with Who = user }
-        let nextModel = { currentModel with Review = newReview }
-        printfn "Changing model to %A" nextModel
-        nextModel, Cmd.none
-    | CommentFieldChanged comment ->
-        let newReview = { currentModel.Review with Comment = comment }
-        let nextModel = { currentModel with Review = newReview }
-        printfn "Changing model to %A" nextModel
-        nextModel, Cmd.none
+        let newRating, _ = Rating.update msg currentModel.RatingModel
+        let newReview = { currentModel.Review with Rating = newRating.SelectedRating }
+        { currentModel with Review = newReview; RatingModel = newRating }, Cmd.none
+    | ContentChanged review ->
+        printfn "Changing model to %A" review
+        { currentModel with Review = review }, Cmd.none
     | SubmitReview review ->
-        let nextModel = { currentModel with Review = review }
-        printfn "New review is %A" nextModel
-        nextModel, Cmd.none
+        printfn "New review is %A" review
+        { currentModel with Review = review }, Cmd.none
     | CancelReview -> currentModel, Cmd.none

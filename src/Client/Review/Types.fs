@@ -2,17 +2,15 @@ module Review.Types
 
 open Shared
 
-type RatingModel = { MaxRating: int; HoverRating: int; SelectedRating: int; IsReadOnly: bool }
+//type RatingModel = { MaxRating: int; HoverRating: int; SelectedRating: int; IsReadOnly: bool }
 type Model =
     {
-        FilmName: string
         Review: Review
-        Rating: Rating.Model
+        RatingModel: Rating.Model
     }
 
 type Msg =
     | RatingMsg of Rating.Msg
-    | UserFieldChanged of string
-    | CommentFieldChanged of string
+    | ContentChanged of Review
     | SubmitReview of Review
     | CancelReview
