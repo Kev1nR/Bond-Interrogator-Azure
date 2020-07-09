@@ -26,7 +26,6 @@ var CONFIG = {
     devServerProxy: {
         // redirect requests that start with /api/* to the server on port 8085
         '/api/*': {
-//<<<<<<< HEAD
             target: 'https://localhost:' + (process.env.SERVER_PROXY_PORT || "8086"),
                 secure: false,
                 changeOrigin: true
@@ -36,15 +35,6 @@ var CONFIG = {
             target: 'https://localhost:' + (process.env.SERVER_PROXY_PORT || "8086"),
                 secure: false,
                 ws: true
-//=======
-//             target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || "8086"),
-//                changeOrigin: true
-//            },
-//         // redirect websocket requests that start with /socket/* to the server on the port 8085
-//         '/socket/*': {
-//             target: 'http://localhost:' + (process.env.SERVER_PROXY_PORT || "8086"),
-//             ws: true
-// >>>>>>> Scene3-Take1
            }
        },
     // Use babel-preset-env to generate JS compatible with most-used browsers.
