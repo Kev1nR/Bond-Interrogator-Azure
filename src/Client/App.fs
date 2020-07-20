@@ -37,9 +37,10 @@ type Msg =
 | CloseModal
 | AddReview of BondFilm
 | ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
+| ReviewSummaryUpdate of RatingSummary
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
-let inline pushReview review : Promise<BondFilm> = Fetch.post ("/api/add-review", review)
+let inline pushReview (review: Review) : Promise<RatingSummary> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
@@ -87,8 +88,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, _ = Review.State.update childMsg childModel
+                let addReviewCmd = Cmd.OfPromise.perform pushReview r ReviewSummaryUpdate
                 printfn "Review model after submit %A" nextChildModel
-                { currentModel with ShowModal = None }, Cmd.none
+                { currentModel with ShowModal = None }, addReviewCmd
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowModal = None }, Cmd.none
@@ -109,6 +111,10 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                 let nextChildModel, _ = Review.State.update childMsg { childModel with Review = r }
                 // { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
                 { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
+    | _, ReviewSummaryUpdate rs ->
+        printfn "Got ReviewSummaryUpdate message"
+        printfn "\n\nReview summary average %d of %d reviews" rs.AverageRating rs.NumReviews
+        currentModel, Cmd.none
 
 let safeComponents =
     let components =

@@ -22,10 +22,11 @@ let storageAccount = tryGetEnv "CONNECT_STR" |> Option.defaultValue "UseDevelopm
 let tableClient = storageAccount.CreateCloudTableClient()
 
 type ReviewEntity(review : Review) =
-    inherit TableEntity(partitionKey = review.SequenceId.ToString(), rowKey = review.Who)
+    inherit TableEntity(partitionKey = review.SequenceId.ToString(), rowKey = System.Guid.NewGuid().ToString())
     new() = ReviewEntity()
     member val Rating = review.Rating with get, set
     member val Comment = review.Comment with get, set
+    member val Who = review.Who with get, set
     member val PostedDate = review.PostedDate with get, set
 
 let bondFilmTable = tableClient.GetTableReference("BondFilm")
@@ -50,6 +51,16 @@ let getGirls bondFilmSequenceId =
 
 
 let getImgURI filmId character = AzureServices.getBondMediaCharacterURI (string filmId) character
+
+let getReviewSummary filmId =
+    let ratings = reviewTable.ExecuteQuery(
+                   TableQuery().Where(sprintf "PartitionKey eq '%d'" filmId))
+                  |> Seq.map (fun r -> r.Properties.["Rating"].Int32Value.GetValueOrDefault())
+
+    let ratingSum = ratings |> Seq.sum
+    let ratingCnt = ratings |> Seq.length
+
+    { AverageRating = ratingSum / ratingCnt; NumReviews = ratingCnt }
 
 let getBondFilm (filmId : int) bondGirlsFn bondFoesFn =
     let tq =
@@ -95,25 +106,45 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                      TheEnemy = theEnemy; TheGirls = theGirls})
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
+let postReview (review : Review) =
+        let reviewEntity = ReviewEntity(review)
+        let insertReview = TableOperation.InsertOrReplace(reviewEntity)
+        reviewTable.Execute(insertReview) |> ignore
 
 let port =
     "SERVER_PORT"
     |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8086us
 
 let webApp = router {
-    get "/api/films" (fun next ctx ->
-        task {
-            let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies
-            return! json movieList next ctx
-        })
-    getf "/api/list-media/%s" (fun filmId next ctx ->
-        task {
-            return! json (AzureServices.listBondMedia filmId) next ctx
-        })
-    getf "/api/media-item-character/%s/%s" (fun (filmId, character) next ctx ->
-        task {
-            return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
-        })
+        get "/api/films" (fun next ctx ->
+            task {
+                let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies
+                return! json movieList next ctx
+            })
+        getf "/api/list-media/%s" (fun filmId next ctx ->
+            task {
+                return! json (AzureServices.listBondMedia filmId) next ctx
+            })
+        getf "/api/media-item-character/%s/%s" (fun (filmId, character) next ctx ->
+            task {
+                return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
+            })
+        post "/api/add-review" (fun next ctx ->
+            task {
+                use strm = new StreamReader(ctx.Request.Body)
+                let! conts = strm.ReadToEndAsync()
+                printfn "Body is %A " conts
+                let review = Net.Decode.Auto.fromString<Review>(conts)
+                printfn "Decoded review -> %A" review
+
+                match review with
+                | Ok r ->
+                    postReview r
+                    let rs = getReviewSummary (r.SequenceId)
+                    return! json rs next ctx
+                | Error err ->
+                    return! json (Error err) next ctx
+            })
     }
 
 let configureAzure (services:IServiceCollection) =
