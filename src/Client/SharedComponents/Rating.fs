@@ -24,8 +24,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         printfn "Got a SelectedRating message with value %d" rating
         { currentModel with SelectedRating = rating }, Cmd.none
 
-let view isReadOnly maxRating (model : Model) (dispatch : Msg -> unit) =
-    div [ Style [ Float "left" ] ]
+let view isReadOnly floatDirection maxRating (model : Model) (dispatch : Msg -> unit) =
+    div [ Style [ Float floatDirection ] ]
         [
             for i in 1..maxRating do
                 yield span
@@ -43,5 +43,5 @@ let view isReadOnly maxRating (model : Model) (dispatch : Msg -> unit) =
                 ]
         ]
 
-let fiveStarRater = view false 5
-let fiveStarRating = view true 5
+let fiveStarRater = view false "left" 5
+let fiveStarRating = view true "none" 5

@@ -113,8 +113,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                 { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
     | _, ReviewSummaryUpdate rs ->
         printfn "Got ReviewSummaryUpdate message"
-        printfn "\n\nReview summary average %d of %d reviews" rs.AverageRating rs.NumReviews
-        currentModel, Cmd.none
+        let newfilmReview = { currentModel.BondFilm.Value.Reviews with RatingSummary = rs }
+        let bf = { currentModel.BondFilm.Value with Reviews = newfilmReview }
+        { currentModel with BondFilm = Some bf }, Cmd.none
 
 let safeComponents =
     let components =
@@ -255,18 +256,11 @@ let filmInfo (model : Model) dispatch =
         Column.Offset (Screen.All, Column.Is2) ]
       [ h2 [  ClassName "title" ]
           [
-            match model.BondFilm with
-            | Some b -> 
-                let averageRating = b.Reviews.RatingSummary.AverageRating
-                let numReviews = b.Reviews.RatingSummary.NumReviews
-                yield str b.Title
-                if numReviews = 0
-                then
-                  yield str "Be the first to review this film"
-                else
-                  yield Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore
-                  yield str (sprintf " from %d reviews" numReviews)
-            | None -> yield str "\"Do you expect me to talk?\"" 
+            yield model.BondFilm
+                |> Option.fold (fun _ b ->
+                    div [] [
+                        p [] [ str b.Title ] ])
+                   (div [] [ str "\"Do you expect me to talk?\"" ])
 
             yield Container.container []
                     [
@@ -278,11 +272,22 @@ let filmInfo (model : Model) dispatch =
           ]
         p [ ClassName "subtitle"]
           [
+            match model.BondFilm with
+            | Some b ->
+                let averageRating = b.Reviews.RatingSummary.AverageRating
+                let numReviews = b.Reviews.RatingSummary.NumReviews
+                if numReviews = 0
+                then
+                  yield str "Be the first to review this film"
+                else
+                  yield Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore
+                  yield str (sprintf " from %d reviews" numReviews)
+            | None -> yield div [] []
+
             let subtitleContent =
                 model.BondFilm
                 |> Option.fold (fun _ b ->
                     div [] [
-                        //Client.Components.ratingComponent b.Reviews
                         br []
                         p [] [ str b.Synopsis ] ])
                    (div [] [ str "\"No Mr. Bond, I expect you to choose a film!\"" ])

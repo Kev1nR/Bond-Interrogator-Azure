@@ -59,8 +59,8 @@ let getReviewSummary filmId =
 
     let ratingSum = ratings |> Seq.sum
     let ratingCnt = ratings |> Seq.length
-
-    { AverageRating = ratingSum / ratingCnt; NumReviews = ratingCnt }
+    let avg = if ratingCnt > 0 then ratingSum / ratingCnt else 0
+    { AverageRating = avg; NumReviews = ratingCnt }
 
 let getFilmReviews filmId =
     let ratingSummary = getReviewSummary filmId
@@ -104,6 +104,7 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                     let theEnemy = bondFoesFn sequenceId |> Seq.toList
                     let theGirls = bondGirlsFn sequenceId |> Seq.toList
                     let filmReviews = bondReviews sequenceId
+                    printfn "Reviews %A" filmReviews
 
                     {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
                      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
