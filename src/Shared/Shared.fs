@@ -29,4 +29,5 @@ type BondFilm = {
     Q: Character option
     TheEnemy: Character list
     TheGirls: Character list
+    Reviews: FilmReviews
 }

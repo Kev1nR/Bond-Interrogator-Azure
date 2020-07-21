@@ -62,7 +62,11 @@ let getReviewSummary filmId =
 
     { AverageRating = ratingSum / ratingCnt; NumReviews = ratingCnt }
 
-let getBondFilm (filmId : int) bondGirlsFn bondFoesFn =
+let getFilmReviews filmId =
+    let ratingSummary = getReviewSummary filmId
+    {RatingSummary = ratingSummary; Reviews = [] }
+
+let getBondFilm (filmId : int) bondGirlsFn bondFoesFn bondReviews =
     let tq =
         TableQuery().Where(
             TableQuery.CombineFilters(
@@ -80,14 +84,15 @@ let getBondFilm (filmId : int) bondGirlsFn bondFoesFn =
     let q = if bondData.Properties.ContainsKey("Q") then Some (bondData.Properties.["Q"].StringValue) else None
     let theEnemy = bondFoesFn sequenceId |> Seq.toList
     let theGirls = bondGirlsFn sequenceId |> Seq.toList
+    let filmReviews = bondReviews sequenceId
 
     {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
      M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
      Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-     TheEnemy = theEnemy; TheGirls = theGirls}
+     TheEnemy = theEnemy; TheGirls = theGirls; Reviews = filmReviews }
 
-let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn =
+let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn bondReviews =
     bondDataFn
     |> Seq.map (fun f ->
                     let sequenceId = int f.RowKey
@@ -98,12 +103,13 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                     let q = if f.Properties.ContainsKey("Q") then Some (f.Properties.["Q"].StringValue) else None
                     let theEnemy = bondFoesFn sequenceId |> Seq.toList
                     let theGirls = bondGirlsFn sequenceId |> Seq.toList
+                    let filmReviews = bondReviews sequenceId
 
                     {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
                      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
                      M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
                      Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-                     TheEnemy = theEnemy; TheGirls = theGirls})
+                     TheEnemy = theEnemy; TheGirls = theGirls; Reviews = filmReviews })
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
 let postReview (review : Review) =
@@ -118,7 +124,7 @@ let port =
 let webApp = router {
         get "/api/films" (fun next ctx ->
             task {
-                let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies
+                let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies getFilmReviews
                 return! json movieList next ctx
             })
         getf "/api/list-media/%s" (fun filmId next ctx ->

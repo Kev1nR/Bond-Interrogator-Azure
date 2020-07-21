@@ -31,9 +31,9 @@ let view isReadOnly maxRating (model : Model) (dispatch : Msg -> unit) =
                 yield span
                     [
                         Style [ Cursor "pointer"]
-                        OnMouseOver (fun _ -> dispatch (HoverRating i))
-                        OnMouseLeave (fun _ -> dispatch (HoverRating 0))
-                        OnClick (fun _ -> dispatch (SelectedRating i))
+                        OnMouseOver (fun _ -> if isReadOnly then () else dispatch (HoverRating i))
+                        OnMouseLeave (fun _ -> if isReadOnly then () else dispatch (HoverRating 0))
+                        OnClick (fun _ -> if isReadOnly then () else dispatch (SelectedRating i))
                     ]
                     [
                         Icon.icon [ Icon.Option.Modifiers [ Modifier.TextColor IsWarning ] ]
@@ -44,3 +44,4 @@ let view isReadOnly maxRating (model : Model) (dispatch : Msg -> unit) =
         ]
 
 let fiveStarRater = view false 5
+let fiveStarRating = view true 5

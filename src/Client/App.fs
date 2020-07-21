@@ -255,7 +255,19 @@ let filmInfo (model : Model) dispatch =
         Column.Offset (Screen.All, Column.Is2) ]
       [ h2 [  ClassName "title" ]
           [
-            yield (model.BondFilm |> Option.fold (fun _ b -> str b.Title) (str "\"Do you expect me to talk?\""))
+            match model.BondFilm with
+            | Some b -> 
+                let averageRating = b.Reviews.RatingSummary.AverageRating
+                let numReviews = b.Reviews.RatingSummary.NumReviews
+                yield str b.Title
+                if numReviews = 0
+                then
+                  yield str "Be the first to review this film"
+                else
+                  yield Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore
+                  yield str (sprintf " from %d reviews" numReviews)
+            | None -> yield str "\"Do you expect me to talk?\"" 
+
             yield Container.container []
                     [
                         match model.BondFilm with
