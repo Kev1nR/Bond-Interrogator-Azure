@@ -280,8 +280,14 @@ let filmInfo (model : Model) dispatch =
                 then
                   yield str "Be the first to review this film"
                 else
-                  yield Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore
-                  yield str (sprintf " from %d reviews" numReviews)
+                  yield Level.level []
+                            [
+                              Level.item []
+                                  [
+                                    div [ Style [PaddingRight 10]] [Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore]
+                                    div [] [str (sprintf "   from %d reviews" numReviews)]
+                                  ]
+                            ]
             | None -> yield div [] []
 
             let subtitleContent =
