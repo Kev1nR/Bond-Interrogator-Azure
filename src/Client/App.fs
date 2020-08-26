@@ -333,7 +333,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                           [ str "A SPECTRE agent's guide to the Bond film catalogue" ] ] ] ]
           dropDownList model dispatch
 
-          Container.container []
+          Container.container [  ]
             [
               match model.ShowModal with
               | Some Review ->
@@ -355,6 +355,25 @@ let view (model : Model) (dispatch : Msg -> unit) =
 
           Container.container [ ]
             [ filmInfo model dispatch ]
+
+          Container.container []
+            [
+                Panel.panel []
+                    [
+                        Panel.heading []
+                            [
+                                str "Panel heading"
+                                Button.button [] [ str "toggle"]
+                            ]
+                        Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, true) ] ]
+                        // Panel.block [ Style [ Hidden false ] ]
+                            [
+                                str "xxx"
+                                Input.input []
+                            ]
+                    ]
+            ]
+
 
           footer [ ClassName "footer" ]
             [ footerContainer ] ]

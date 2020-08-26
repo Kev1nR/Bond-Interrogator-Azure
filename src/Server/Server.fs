@@ -66,33 +66,10 @@ let getFilmReviews filmId =
     let ratingSummary = getReviewSummary filmId
     {RatingSummary = ratingSummary; Reviews = [] }
 
-let getBondFilm (filmId : int) bondGirlsFn bondFoesFn bondReviews =
-    let tq =
-        TableQuery().Where(
-            TableQuery.CombineFilters(
-                TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, "BondFilm"),
-                TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, filmId.ToString())))
-
-    let bondData = bondFilmTable.ExecuteQuery(tq) |> Seq.head
-
-    let sequenceId = int bondData.RowKey
-    let title = if bondData.Properties.ContainsKey("Title") then bondData.Properties.["Title"].StringValue else ""
-    let synopsis = if bondData.Properties.ContainsKey("Synopsis") then bondData.Properties.["Synopsis"].StringValue else ""
-    let bond = if bondData.Properties.ContainsKey("Bond") then bondData.Properties.["Bond"].StringValue else ""
-    let m = if bondData.Properties.ContainsKey("M") then Some (bondData.Properties.["M"].StringValue) else None
-    let q = if bondData.Properties.ContainsKey("Q") then Some (bondData.Properties.["Q"].StringValue) else None
-    let theEnemy = bondFoesFn sequenceId |> Seq.toList
-    let theGirls = bondGirlsFn sequenceId |> Seq.toList
-    let filmReviews = bondReviews sequenceId
-
-    {SequenceId = sequenceId; Title = title; Synopsis = synopsis;
-     Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
-     M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
-     Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-     TheEnemy = theEnemy; TheGirls = theGirls; Reviews = filmReviews }
-
-let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn bondReviews =
+let buildMovieList (bondDataFn : DynamicTableEntity seq)
+                   (bondGirlsFn : int -> Character seq)
+                   (bondFoesFn : int -> Character seq)
+                   (bondReviews : int -> FilmReviews) =
     bondDataFn
     |> Seq.map (fun f ->
                     let sequenceId = int f.RowKey
@@ -101,8 +78,8 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                     let bond = if f.Properties.ContainsKey("Bond") then f.Properties.["Bond"].StringValue else ""
                     let m = if f.Properties.ContainsKey("M") then Some (f.Properties.["M"].StringValue) else None
                     let q = if f.Properties.ContainsKey("Q") then Some (f.Properties.["Q"].StringValue) else None
-                    let theEnemy = bondFoesFn sequenceId |> Seq.toList
-                    let theGirls = bondGirlsFn sequenceId |> Seq.toList
+                    let theEnemy = sequenceId |> bondFoesFn |> Seq.toList
+                    let theGirls = sequenceId |> bondGirlsFn |> Seq.toList
                     let filmReviews = bondReviews sequenceId
                     printfn "Reviews %A" filmReviews
 
@@ -110,7 +87,7 @@ let buildMovieList (bondDataFn : DynamicTableEntity seq) bondGirlsFn bondFoesFn 
                      Bond = Some {Name="James Bond"; Actor=bond; ImageURI = (getImgURI sequenceId "James Bond") };
                      M = m |> Option.map (fun actor -> {Name="M"; Actor=actor; ImageURI = (getImgURI sequenceId "M") });
                      Q = q |> Option.map (fun actor -> {Name="Q"; Actor=actor; ImageURI = (getImgURI sequenceId "Q") });
-                     TheEnemy = theEnemy; TheGirls = theGirls; Reviews = filmReviews })
+                     TheEnemy = theEnemy; TheGirls = theGirls; Reviews = filmReviews})
             |> Seq.toList (* <- NOTE this is important the encoder doesn't like IEnumerable need to convert to List *)
 
 let postReview (review : Review) =
