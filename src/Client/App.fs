@@ -26,6 +26,7 @@ type Model =
       IsBurgerOpen : bool
       ShowModal: ModalContent option
       ReviewModel : Review.Types.Model option
+      ReviewPanelOpen : bool
     }
 
 // The Msg type defines what events/actions can occur while the application is running
@@ -38,6 +39,7 @@ type Msg =
 | AddReview of BondFilm
 | ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
 | ReviewSummaryUpdate of RatingSummary
+| ToggleReviewPanel
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let inline pushReview (review: Review) : Promise<RatingSummary> = Fetch.post ("/api/add-review", review)
@@ -52,7 +54,8 @@ let init () : Model * Cmd<Msg> =
         CurrentFilm = None;
         IsBurgerOpen = false;
         ShowModal = None
-        ReviewModel = None}
+        ReviewModel = None
+        ReviewPanelOpen = false}
     let loadBondFilmsCmd =
         Cmd.OfPromise.perform initialFilms () BondFilmListLoaded
     initialModel, loadBondFilmsCmd
@@ -75,6 +78,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
                           IsBurgerOpen = false
                           ShowModal = None
                           ReviewModel = None
+                          ReviewPanelOpen = false
                         }
         nextModel, Cmd.none
     | _, ToggleBurger -> { currentModel with IsBurgerOpen = not currentModel.IsBurgerOpen }, Cmd.none
@@ -116,6 +120,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let newfilmReview = { currentModel.BondFilm.Value.Reviews with RatingSummary = rs }
         let bf = { currentModel.BondFilm.Value with Reviews = newfilmReview }
         { currentModel with BondFilm = Some bf }, Cmd.none
+    | _, ToggleReviewPanel -> { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
 
 let safeComponents =
     let components =
@@ -363,10 +368,11 @@ let view (model : Model) (dispatch : Msg -> unit) =
                         Panel.heading []
                             [
                                 str "Panel heading"
-                                Button.button [] [ str "toggle"]
+                                Button.button [ Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ] [ str "toggle"]
                             ]
-                        Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, true) ] ]
-                        // Panel.block [ Style [ Hidden false ] ]
+                        // Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, true) ] ]
+                        Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
+                        //Panel.block [ Style [ Hidden false ] ]
                             [
                                 str "xxx"
                                 Input.input []
