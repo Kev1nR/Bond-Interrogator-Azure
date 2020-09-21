@@ -285,7 +285,7 @@ let filmInfo (model : Model) dispatch =
                               Level.item []
                                   [
                                     div [ Style [PaddingRight 10]] [Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore]
-                                    div [] [str (sprintf "   from %d reviews" numReviews)]
+                                    div [] [str (sprintf " from %d reviews" numReviews)]
                                   ]
                             ]
             | None -> yield div [] []
