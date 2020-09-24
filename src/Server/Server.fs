@@ -63,8 +63,24 @@ let getReviewSummary filmId =
     { AverageRating = avg; NumReviews = ratingCnt }
 
 let getFilmReviews filmId =
-    let ratingSummary = getReviewSummary filmId
-    {RatingSummary = ratingSummary; Reviews = [] }
+    let reviews = reviewTable.ExecuteQuery(
+                   TableQuery().Where(sprintf "PartitionKey eq '%d'" filmId))
+                  |> Seq.map (fun r ->
+                        {
+                            SequenceId = filmId
+                            Who = r.Properties.["Who"].StringValue
+                            PostedDate = r.Properties.["PostedDate"].DateTime.GetValueOrDefault()
+                            Comment = r.Properties.["Comment"].StringValue
+                            Rating = r.Properties.["Rating"].Int32Value.GetValueOrDefault()
+                        })
+
+    let ratings = reviews |> Seq.map (fun rs -> rs.Rating)
+    let ratingSum = ratings |> Seq.sum
+    let ratingCnt = ratings |> Seq.length
+    let avg = if ratingCnt > 0 then ratingSum / ratingCnt else 0
+    let ratingSummary = { AverageRating = avg; NumReviews = ratingCnt }
+
+    {RatingSummary = ratingSummary; Reviews = reviews |> Seq.toList }
 
 let buildMovieList (bondDataFn : DynamicTableEntity seq)
                    (bondGirlsFn : int -> Character seq)
@@ -110,6 +126,10 @@ let webApp = router {
                 return! json (AzureServices.listBondMedia filmId) next ctx
             })
         getf "/api/media-item-character/%s/%s" (fun (filmId, character) next ctx ->
+            task {
+                return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
+            })
+        getf "/api/film/reviews/%d" (fun filmId next ctx ->
             task {
                 return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
             })

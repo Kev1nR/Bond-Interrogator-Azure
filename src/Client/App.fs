@@ -42,6 +42,7 @@ type Msg =
 | ToggleReviewPanel
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
+let getFilmReviews filmId = Fetch.fetchAs<FilmReviews> ("/api/film/reviews", filmId)
 let inline pushReview (review: Review) : Promise<RatingSummary> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
@@ -120,7 +121,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let newfilmReview = { currentModel.BondFilm.Value.Reviews with RatingSummary = rs }
         let bf = { currentModel.BondFilm.Value with Reviews = newfilmReview }
         { currentModel with BondFilm = Some bf }, Cmd.none
-    | _, ToggleReviewPanel -> { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
+    | _, ToggleReviewPanel ->
+        let filmReviews =
+        { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
 
 let safeComponents =
     let components =
@@ -401,11 +404,29 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                             ]
 
                             ]
-                        Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
+
+                        Container.container []
                             [
-                                str "xxx"
-                                Input.input []
+                                match model.BondFilm with
+                                | Some bf ->
+                                    for r in bf.Reviews.Reviews do
+                                        printfn "Review %s" r.Who
+                                        yield Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
+                                                [
+                                                    str (sprintf "%s" r.Comment)
+                                                ]
+                                | None -> ()
                             ]
+                        // Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
+                        //     [
+                        //         str "xxx"
+                        //         Input.input []
+                        //     ]
+                        // Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
+                        //     [
+                        //         str "yyy"
+                        //         Input.input []
+                        //     ]
                     ]
             ]
 

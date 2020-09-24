@@ -12,6 +12,7 @@
         <Compile Include=".\Review\Types.fs" />
         <Compile Include=".\Review\State.fs" />
         <Compile Include=".\Review\View.fs" />
+        <Compile Include=".\ReviewViewer\View.fs" />
         <Compile Include="Version.fs" />
         <Compile Include="App.fs" />
         <Compile Include="Client.fs" />
