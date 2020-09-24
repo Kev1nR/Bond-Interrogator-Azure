@@ -367,19 +367,47 @@ let view (model : Model) (dispatch : Msg -> unit) =
                     [
                         Panel.heading []
                             [
-                                str "Panel heading"
-                                Button.button [ Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ] [ str "toggle"]
+                                match model.BondFilm with
+                                | Some bf ->
+                                    yield Level.level []
+                                            [
+                                                Level.left []
+                                                    [
+                                                        Level.item [] [str (sprintf "Reviews - %d reviews" bf.Reviews.RatingSummary.NumReviews)]
+                                                    ]
+                                                Level.right [] [Button.button
+                                                                 [ Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ]
+                                                                 [ Icon.icon []
+                                                                    [ Fa.i
+                                                                        [
+                                                                            (if model.ReviewPanelOpen
+                                                                             then
+                                                                                Fa.Solid.AngleRight
+                                                                             else
+                                                                                Fa.Solid.AngleDown)
+                                                                            Fa.FixedWidth
+                                                                        ] [] ]
+                                                                 ]
+                                                               ]
+                                            ]
+                                | None ->
+                                    yield Level.level []
+                                            [
+                                                Level.left []
+                                                    [
+                                                        Level.item [] [str "Reviews"]
+                                                    ]
+                                                Level.right [] [Button.button [ Button.Disabled true; Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ] [ str "toggle"]]
+                                            ]
+
                             ]
-                        // Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, true) ] ]
                         Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
-                        //Panel.block [ Style [ Hidden false ] ]
                             [
                                 str "xxx"
                                 Input.input []
                             ]
                     ]
             ]
-
 
           footer [ ClassName "footer" ]
             [ footerContainer ] ]
