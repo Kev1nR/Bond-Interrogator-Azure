@@ -146,7 +146,9 @@ let navBrand isBurgerOpen dispatch =
     Navbar.Brand.div [ ]
         [ Navbar.Item.a
             [ Navbar.Item.Props [] ]
-            [ img [ Src "007_tranparent.png"
+            [ img [ 
+                    Id "top" 
+                    Src "007_tranparent.png"
                     Alt "Logo" ] ]
           Navbar.burger [ Modifiers [ ]
                           CustomClass (if isBurgerOpen then "is-active" else "")
@@ -286,6 +288,7 @@ let filmInfo (model : Model) dispatch =
                                   [
                                     div [ Style [PaddingRight 10]] [Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore]
                                     div [] [str (sprintf "   from %d reviews" numReviews)]
+                                    a [ Href "#bottom" ] [ str "Bottom" ]
                                   ]
                             ]
             | None -> yield div [] []
@@ -307,8 +310,10 @@ let filmInfo (model : Model) dispatch =
 let footerContainer =
     Container.container [ ]
         [ Content.content [ Content.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]
-            [ p [ ]
+            [ p [  Id "bottom" ]
                 [ safeComponents ]
+              p []
+                [ a [ Href "#top" ] [ str "Top" ]]
               p [ ]
                 [ a [ Href "https://github.com/SAFE-Stack/SAFE-template" ]
                     [ Icon.icon [ ]
@@ -319,7 +324,16 @@ let view (model : Model) (dispatch : Msg -> unit) =
         [ Hero.hero
             [ Hero.Color IsPrimary
               Hero.IsHalfHeight
-              Hero.IsBold ]
+              Hero.IsBold
+
+              Hero.Props [
+                          Style [
+                              Background """linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://unsplash.it/1200/900?random") no-repeat center center fixed"""
+                              BackgroundSize "cover"
+                          ]]
+
+
+               ]
             [ Hero.head [ ]
                 [ Navbar.navbar [ ]
                     [ Container.container [ ]
