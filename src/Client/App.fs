@@ -42,7 +42,8 @@ type Msg =
 | ToggleReviewPanel
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
-let getFilmReviews filmId = Fetch.fetchAs<FilmReviews> ("/api/film/reviews", filmId)
+let getFilmReviews filmId = Fetch.fetchAs<FilmReviews> (sprintf "/api/film/reviews/%A" filmId)
+// let getFilmReviews filmId = Fetch.get (sprintf "/api/film/reviews/%d" filmId)
 let inline pushReview (review: Review) : Promise<RatingSummary> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
@@ -122,8 +123,13 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let bf = { currentModel.BondFilm.Value with Reviews = newfilmReview }
         { currentModel with BondFilm = Some bf }, Cmd.none
     | _, ToggleReviewPanel ->
-        let filmReviews =
-        { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
+        match currentModel.BondFilm, currentModel.ReviewPanelOpen with
+        | Some bf, true ->
+            let filmReviews = getFilmReviews (bf.SequenceId)
+            let newBf = { bf with Reviews = filmReviews }
+            { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen;  }, Cmd.none
+        | _ ->
+            { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
 
 let safeComponents =
     let components =

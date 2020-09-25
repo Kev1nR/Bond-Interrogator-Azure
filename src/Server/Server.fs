@@ -118,7 +118,7 @@ let port =
 let webApp = router {
         get "/api/films" (fun next ctx ->
             task {
-                let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies getFilmReviews
+                let movieList = buildMovieList (bondFilmTable.ExecuteQuery(getBondfilms)) getGirls getEnemies (getReviewSummary >> fun rs -> { RatingSummary = rs; Reviews = [] })
                 return! json movieList next ctx
             })
         getf "/api/list-media/%s" (fun filmId next ctx ->
@@ -129,9 +129,11 @@ let webApp = router {
             task {
                 return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
             })
-        getf "/api/film/reviews/%d" (fun filmId next ctx ->
+        getf "/api/film/reviews/%s" (fun filmId next ctx ->
             task {
-                return! json (AzureServices.getBondMediaCharacterURI filmId character) next ctx
+                printfn "GET film reviews for film id %s" filmId
+
+                return! json (getFilmReviews (filmId |> int)) next ctx
             })
         post "/api/add-review" (fun next ctx ->
             task {
