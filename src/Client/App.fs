@@ -125,8 +125,8 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, ToggleReviewPanel ->
         match currentModel.BondFilm, currentModel.ReviewPanelOpen with
         | Some bf, true ->
-            let filmReviews = getFilmReviews (bf.SequenceId)
-            let newBf = { bf with Reviews = filmReviews }
+            // let filmReviews = getFilmReviews (bf.SequenceId)
+            // let newBf = { bf with Reviews = filmReviews }
             { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen;  }, Cmd.none
         | _ ->
             { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
@@ -160,8 +160,8 @@ let navBrand isBurgerOpen dispatch =
     Navbar.Brand.div [ ]
         [ Navbar.Item.a
             [ Navbar.Item.Props [] ]
-            [ img [ 
-                    Id "top" 
+            [ img [
+                    Id "top"
                     Src "007_tranparent.png"
                     Alt "Logo" ] ]
           Navbar.burger [ Modifiers [ ]
@@ -277,14 +277,6 @@ let filmInfo (model : Model) dispatch =
                     div [] [
                         p [] [ str b.Title ] ])
                    (div [] [ str "\"Do you expect me to talk?\"" ])
-
-            yield Container.container []
-                    [
-                        match model.BondFilm with
-                        | Some bf ->
-                           yield  Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ]
-                        | None -> yield p [] []
-                    ]
           ]
         p [ ClassName "subtitle"]
           [
@@ -294,17 +286,16 @@ let filmInfo (model : Model) dispatch =
                 let numReviews = b.Reviews.RatingSummary.NumReviews
                 if numReviews = 0
                 then
-                  yield str "Be the first to review this film"
+                  yield  a [ Href "#review-panel" ] [ str  "Be the first to review this film" ]
                 else
                   yield Level.level []
                             [
                               Level.item []
                                   [
                                     div [ Style [PaddingRight 10]] [Rating.fiveStarRating {SelectedRating = averageRating; HoverRating = 0 } ignore]
-                                    div [] [str (sprintf "   from %d reviews" numReviews)]
-                                    a [ Href "#bottom" ] [ str "Bottom" ]
+                                    div [] [ a [ Href "#review-panel" ] [str (sprintf " from %d reviews." numReviews) ]]
                                   ]
-                            ]
+                              ]
             | None -> yield div [] []
 
             let subtitleContent =
@@ -326,8 +317,6 @@ let footerContainer =
         [ Content.content [ Content.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]
             [ p [  Id "bottom" ]
                 [ safeComponents ]
-              p []
-                [ a [ Href "#top" ] [ str "Top" ]]
               p [ ]
                 [ a [ Href "https://github.com/SAFE-Stack/SAFE-template" ]
                     [ Icon.icon [ ]
@@ -342,11 +331,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
 
               Hero.Props [
                           Style [
-                              Background """linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://unsplash.it/1200/900?random") no-repeat center center fixed"""
+                            //   Background """linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://unsplash.it/1200/900?random") no-repeat center center fixed"""
+                              Background """linear-gradient(rgba(0, 255, 0, 0.5), rgba(0, 0, 0, 0.5)), url("Bond-gun-barrel.png") no-repeat center top fixed"""
                               BackgroundSize "cover"
                           ]]
-
-
                ]
             [ Hero.head [ ]
                 [ Navbar.navbar [ ]
@@ -388,15 +376,16 @@ let view (model : Model) (dispatch : Msg -> unit) =
             [
                 Panel.panel []
                     [
-                        Panel.heading []
+                        Panel.heading [ Props [ Id "review-panel" ] ]
                             [
                                 match model.BondFilm with
                                 | Some bf ->
-                                    yield Level.level []
+                                    yield Level.level [ ]
                                             [
                                                 Level.left []
                                                     [
-                                                        Level.item [] [str (sprintf "Reviews - %d reviews" bf.Reviews.RatingSummary.NumReviews)]
+                                                        Level.item [ ] [ str (sprintf "Reviews - %d reviews" bf.Reviews.RatingSummary.NumReviews)]
+                                                        Level.item [ ] [ Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ] ]
                                                     ]
                                                 Level.right [] [Button.button
                                                                  [ Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ]
