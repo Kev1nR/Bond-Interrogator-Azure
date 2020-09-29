@@ -40,6 +40,7 @@ type Msg =
 | ReviewMsgHandler of Review.Types.Msg * Review.Types.Model
 | ReviewSummaryUpdate of RatingSummary
 | ToggleReviewPanel
+| ReviewsLoaded of FilmReviews
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let getFilmReviews filmId = Fetch.fetchAs<FilmReviews> (sprintf "/api/film/reviews/%A" filmId)
@@ -123,13 +124,21 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
         let bf = { currentModel.BondFilm.Value with Reviews = newfilmReview }
         { currentModel with BondFilm = Some bf }, Cmd.none
     | _, ToggleReviewPanel ->
+        printfn "currentModel.ReviewPanelOpen %A" currentModel.ReviewPanelOpen
         match currentModel.BondFilm, currentModel.ReviewPanelOpen with
         | Some bf, true ->
-            // let filmReviews = getFilmReviews (bf.SequenceId)
+
+            let filmReviewsCmd = Cmd.OfPromise.perform getFilmReviews (bf.SequenceId) ReviewsLoaded
             // let newBf = { bf with Reviews = filmReviews }
-            { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen;  }, Cmd.none
+            { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen;  }, filmReviewsCmd
         | _ ->
             { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
+    | _, ReviewsLoaded fr ->
+        printfn "ReviewsLoaded with %A" fr
+
+        let newBF = { currentModel.BondFilm.Value with Reviews = fr }
+
+        { currentModel with BondFilm = Some newBF }, Cmd.none
 
 let safeComponents =
     let components =
@@ -388,15 +397,17 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                                         Level.item [ ] [ Button.button [ Button.OnClick (fun _ -> dispatch (AddReview bf) ) ] [ str "Add review" ] ]
                                                     ]
                                                 Level.right [] [Button.button
-                                                                 [ Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ]
+                                                                 [ Button.OnClick (fun _ ->
+                                                                                    printfn "Sending ToggleReviewPanel message"
+                                                                                    dispatch ToggleReviewPanel) ]
                                                                  [ Icon.icon []
                                                                     [ Fa.i
                                                                         [
                                                                             (if model.ReviewPanelOpen
                                                                              then
-                                                                                Fa.Solid.AngleRight
+                                                                                Fa.Solid.AngleDown
                                                                              else
-                                                                                Fa.Solid.AngleDown)
+                                                                                Fa.Solid.AngleRight)
                                                                             Fa.FixedWidth
                                                                         ] [] ]
                                                                  ]
@@ -418,24 +429,15 @@ let view (model : Model) (dispatch : Msg -> unit) =
                             [
                                 match model.BondFilm with
                                 | Some bf ->
+
                                     for r in bf.Reviews.Reviews do
                                         printfn "Review %s" r.Who
-                                        yield Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
+                                        yield Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (not model.ReviewPanelOpen)) ] ]
                                                 [
                                                     str (sprintf "%s" r.Comment)
                                                 ]
                                 | None -> ()
                             ]
-                        // Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
-                        //     [
-                        //         str "xxx"
-                        //         Input.input []
-                        //     ]
-                        // Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (model.ReviewPanelOpen)) ] ]
-                        //     [
-                        //         str "yyy"
-                        //         Input.input []
-                        //     ]
                     ]
             ]
 
