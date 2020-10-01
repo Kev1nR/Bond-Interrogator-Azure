@@ -44,7 +44,6 @@ type Msg =
 
 let initialFilms () = Fetch.fetchAs<BondFilm list> "/api/films"
 let getFilmReviews filmId = Fetch.fetchAs<FilmReviews> (sprintf "/api/film/reviews/%A" filmId)
-// let getFilmReviews filmId = Fetch.get (sprintf "/api/film/reviews/%d" filmId)
 let inline pushReview (review: Review) : Promise<RatingSummary> = Fetch.post ("/api/add-review", review)
 
 // defines the initial state and initial command (= side-effect) of the application
@@ -70,7 +69,7 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match currentModel.BondFilmList, msg with
     | _, BondFilmSelected b ->
         printf "BondFilmSelected msg"
-        let nextModel = { currentModel with BondFilm = Some b; CurrentFilm = Some b.SequenceId }
+        let nextModel = { currentModel with BondFilm = Some b; CurrentFilm = Some b.SequenceId; ReviewPanelOpen = false }
         nextModel, Cmd.none
     | _, BondFilmListLoaded films ->
         let nextModel = { ValidationError = None
@@ -95,9 +94,12 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             | Review.Types.SubmitReview r ->
                 printf "Got a SubmitReview message with value %A" r
                 let nextChildModel, _ = Review.State.update childMsg childModel
-                let addReviewCmd = Cmd.OfPromise.perform pushReview r ReviewSummaryUpdate
+                let submitAndUpdateReviewCmd = Cmd.batch [
+                                                            Cmd.OfPromise.perform pushReview r ReviewSummaryUpdate
+                                                            Cmd.OfPromise.perform getFilmReviews (r.SequenceId) ReviewsLoaded
+                                                         ]
                 printfn "Review model after submit %A" nextChildModel
-                { currentModel with ShowModal = None }, addReviewCmd
+                { currentModel with ShowModal = None }, submitAndUpdateReviewCmd
             | Review.Types.CancelReview ->
                 printf "Got a CancelReview message"
                 { currentModel with ShowModal = None }, Cmd.none
@@ -116,7 +118,6 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
             | Review.Types.ContentChanged r ->
                 printf "Got Content changed ReviewMsg %A" childMsg
                 let nextChildModel, _ = Review.State.update childMsg { childModel with Review = r }
-                // { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
                 { currentModel with ReviewModel = Some nextChildModel }, Cmd.none
     | _, ReviewSummaryUpdate rs ->
         printfn "Got ReviewSummaryUpdate message"
@@ -126,10 +127,9 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | _, ToggleReviewPanel ->
         printfn "currentModel.ReviewPanelOpen %A" currentModel.ReviewPanelOpen
         match currentModel.BondFilm, currentModel.ReviewPanelOpen with
-        | Some bf, true ->
+        | Some bf, false ->
 
             let filmReviewsCmd = Cmd.OfPromise.perform getFilmReviews (bf.SequenceId) ReviewsLoaded
-            // let newBf = { bf with Reviews = filmReviews }
             { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen;  }, filmReviewsCmd
         | _ ->
             { currentModel with ReviewPanelOpen = not currentModel.ReviewPanelOpen }, Cmd.none
@@ -338,13 +338,10 @@ let view (model : Model) (dispatch : Msg -> unit) =
               Hero.IsHalfHeight
               Hero.IsBold
 
-              Hero.Props [
-                          Style [
-                            //   Background """linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://unsplash.it/1200/900?random") no-repeat center center fixed"""
+              Hero.Props [ Style [
                               Background """linear-gradient(rgba(0, 255, 0, 0.5), rgba(0, 0, 0, 0.5)), url("Bond-gun-barrel.png") no-repeat center top fixed"""
                               BackgroundSize "cover"
-                          ]]
-               ]
+                          ]]]
             [ Hero.head [ ]
                 [ Navbar.navbar [ ]
                     [ Container.container [ ]
@@ -415,31 +412,39 @@ let view (model : Model) (dispatch : Msg -> unit) =
                                             ]
                                 | None ->
                                     yield Level.level []
-                                            [
-                                                Level.left []
-                                                    [
-                                                        Level.item [] [str "Reviews"]
-                                                    ]
-                                                Level.right [] [Button.button [ Button.Disabled true; Button.OnClick (fun _ -> dispatch ToggleReviewPanel) ] [ str "toggle"]]
-                                            ]
-
+                                            [ Level.left [] [ Level.item [] [str "Reviews"] ] ]
                             ]
 
-                        Container.container []
+                        Container.container [ Container.Option.Modifiers [ Modifier.IsHidden ( Screen.All, (not model.ReviewPanelOpen))]]
                             [
                                 match model.BondFilm with
                                 | Some bf ->
 
                                     for r in bf.Reviews.Reviews do
                                         printfn "Review %s" r.Who
-                                        yield Panel.block [ Panel.Block.Modifiers [ Modifier.IsInvisible (Screen.All, (not model.ReviewPanelOpen)) ] ]
-                                                [
-                                                    str (sprintf "%s" r.Comment)
+
+                                        yield Panel.block [ Panel.Block.Modifiers [
+                                                                Modifier.IsInvisible (Screen.All, (not model.ReviewPanelOpen))
+                                                                Modifier.Display (Screen.All, Display.Block) // This is required due to a Bulma bug that shrinks the hosrizontal width of the 'flex' Panel.block
+                                                                ] ]
+                                                [ Level.level []
+                                                    [ Level.left []
+                                                        [ Level.item []
+                                                            [ Heading.h5 [ Heading.IsSubtitle ]
+                                                                [
+                                                                    strong []  [ str "Review posted by "]
+                                                                    str (sprintf "%s on " r.Who)
+                                                                    em [] [str (sprintf "%s" (r.PostedDate.ToString("d MMM yyyy, hh:mm"))) ]
+                                                                ]
+                                                            ]
+                                                        ]
+                                                      Level.right [] [ Level.item [] [ Rating.fiveStarRating { SelectedRating = r.Rating; HoverRating = 0 } ignore ] ]
+                                                    ]
+                                                  Level.level []
+                                                    [ Level.left [] [ str r.Comment ] ]
                                                 ]
                                 | None -> ()
-                            ]
-                    ]
-            ]
+                            ]]]
 
           footer [ ClassName "footer" ]
             [ footerContainer ] ]

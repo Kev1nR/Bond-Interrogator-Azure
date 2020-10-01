@@ -73,6 +73,7 @@ let getFilmReviews filmId =
                             Comment = r.Properties.["Comment"].StringValue
                             Rating = r.Properties.["Rating"].Int32Value.GetValueOrDefault()
                         })
+                   |> Seq.sortByDescending (fun r -> r.PostedDate)
 
     let ratings = reviews |> Seq.map (fun rs -> rs.Rating)
     let ratingSum = ratings |> Seq.sum
