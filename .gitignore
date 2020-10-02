@@ -13,6 +13,7 @@ release.sh
 *.orig
 *.DotSettings.user
 deploy
+deploy.zip
 .ionide/
 Bond-Interrogator-Azure.wiki/
 
